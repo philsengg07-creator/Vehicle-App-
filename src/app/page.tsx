@@ -8,9 +8,9 @@ import { EmployeeDashboard } from '@/components/fleetnav/EmployeeDashboard';
 import { RoleSelection } from '@/components/fleetnav/RoleSelection';
 
 function FleetNavApp() {
-  const { role } = useApp();
+  const { role, currentEmployeeId } = useApp();
 
-  if (!role) {
+  if (!role || (role === 'employee' && !currentEmployeeId)) {
     return <RoleSelection />;
   }
 
