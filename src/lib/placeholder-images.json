@@ -1,3 +1,22 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "taxi-1",
+      "description": "A yellow taxi on a city street.",
+      "imageUrl": "https://picsum.photos/seed/taxi1/600/400",
+      "imageHint": "yellow taxi"
+    },
+    {
+      "id": "taxi-2",
+      "description": "A modern white taxi.",
+      "imageUrl": "https://picsum.photos/seed/taxi2/600/400",
+      "imageHint": "white car"
+    },
+    {
+      "id": "taxi-3",
+      "description": "A taxi at night.",
+      "imageUrl": "https://picsum.photos/seed/taxi3/600/400",
+      "imageHint": "taxi night"
+    }
+  ]
 }
