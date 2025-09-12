@@ -6,8 +6,6 @@ export interface Taxi {
   capacity: number;
   bookedSeats: number;
   bookings: Booking[];
-  imageUrl: string;
-  imageHint: string;
 }
 
 export interface Booking {

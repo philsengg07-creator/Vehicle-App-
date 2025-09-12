@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { Users, Edit, Trash2, CheckCircle, Car } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import type { Taxi } from "@/types";
@@ -32,12 +31,9 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
 
   return (
     <Card className="flex flex-col overflow-hidden transition-all hover:shadow-lg animate-in fade-in-0 zoom-in-95">
-       <div className="relative">
-        <Image src={taxi.imageUrl} alt={taxi.name} width={600} height={400} className="w-full h-48 object-cover" data-ai-hint={taxi.imageHint} />
-        {isFull && <Badge variant="destructive" className="absolute top-2 right-2 shadow-lg">Full</Badge>}
-      </div>
-      <CardHeader>
+      <CardHeader className="flex-row justify-between items-start">
         <CardTitle className="font-headline text-xl">{taxi.name}</CardTitle>
+        {isFull && <Badge variant="destructive" className="shadow-lg">Full</Badge>}
       </CardHeader>
       <CardContent className="flex-grow">
         <div className="space-y-4">
@@ -46,7 +42,9 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
                     <Users className="h-4 w-4" />
                     <span>Capacity</span>
                 </div>
-                <span className="font-medium text-foreground">{taxi.bookedSeats} / {taxi.capacity}</span>
+                {role === 'admin' || isFull ? (
+                  <span className="font-medium text-foreground">{taxi.bookedSeats} / {taxi.capacity}</span>
+                ) : null }
             </div>
             <Progress value={progressValue} aria-label={`${taxi.bookedSeats} of ${taxi.capacity} seats booked`} />
         </div>

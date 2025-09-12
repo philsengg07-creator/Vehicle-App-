@@ -1,19 +1,4 @@
-import type { Taxi, Booking, AppNotification } from '@/types';
-
-const placeholderImages = [
-  {
-    imageUrl: "https://picsum.photos/seed/taxi1/600/400",
-    imageHint: "yellow taxi"
-  },
-  {
-    imageUrl: "https://picsum.photos/seed/taxi2/600/400",
-    imageHint: "white car"
-  },
-  {
-    imageUrl: "https://picsum.photos/seed/taxi3/600/400",
-    imageHint: "taxi night"
-  }
-];
+import type { Taxi, AppNotification } from '@/types';
 
 export const INITIAL_TAXIS: Taxi[] = [
   {
@@ -25,8 +10,6 @@ export const INITIAL_TAXIS: Taxi[] = [
       { id: 'booking-1', taxiId: 'taxi-1', taxiName: 'City Cruiser', employeeId: 'emp-2', bookingTime: new Date(new Date().setDate(new Date().getDate()-1)) },
       { id: 'booking-2', taxiId: 'taxi-1', taxiName: 'City Cruiser', employeeId: 'emp-3', bookingTime: new Date(new Date().setDate(new Date().getDate()-1)) }
     ],
-    imageUrl: placeholderImages[0].imageUrl,
-    imageHint: placeholderImages[0].imageHint
   },
   {
     id: 'taxi-2',
@@ -40,8 +23,6 @@ export const INITIAL_TAXIS: Taxi[] = [
       employeeId: `emp-${4 + i}`,
       bookingTime: new Date(),
     })),
-    imageUrl: placeholderImages[1].imageUrl,
-    imageHint: placeholderImages[1].imageHint
   },
   {
     id: 'taxi-3',
@@ -49,8 +30,6 @@ export const INITIAL_TAXIS: Taxi[] = [
     capacity: 4,
     bookedSeats: 0,
     bookings: [],
-    imageUrl: placeholderImages[2].imageUrl,
-    imageHint: placeholderImages[2].imageHint
   }
 ];
 

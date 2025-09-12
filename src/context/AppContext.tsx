@@ -6,10 +6,10 @@ import { INITIAL_TAXIS, INITIAL_REMAINING_EMPLOYEES, INITIAL_NOTIFICATIONS } fro
 import { useToast } from "@/hooks/use-toast";
 
 export interface AppContextType {
-  role: UserRole;
+  role: UserRole | null;
   switchRole: (role: UserRole) => void;
   taxis: Taxi[];
-  addTaxi: (taxi: Omit<Taxi, 'id' | 'bookedSeats' | 'bookings' | 'imageUrl' | 'imageHint'>) => void;
+  addTaxi: (taxi: Omit<Taxi, 'id' | 'bookedSeats' | 'bookings'>) => void;
   editTaxi: (taxiId: string, data: Partial<Omit<Taxi, 'id' | 'bookedSeats' | 'bookings'>>) => void;
   deleteTaxi: (taxiId: string) => void;
   bookSeat: (taxiId: string) => void;
@@ -23,7 +23,7 @@ export interface AppContextType {
 export const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [role, setRole] = useState<UserRole>('employee');
+  const [role, setRole] = useState<UserRole | null>(null);
   const [taxis, setTaxis] = useState<Taxi[]>(INITIAL_TAXIS);
   const [remainingEmployees, setRemainingEmployees] = useState<string[]>(INITIAL_REMAINING_EMPLOYEES);
   const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
@@ -43,14 +43,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setNotifications(prev => [newNotification, ...prev]);
   };
   
-  const addTaxi = (taxiData: Omit<Taxi, 'id' | 'bookedSeats' | 'bookings' | 'imageUrl' | 'imageHint'>) => {
+  const addTaxi = (taxiData: Omit<Taxi, 'id' | 'bookedSeats' | 'bookings'>) => {
     const newTaxi: Taxi = {
         ...taxiData,
         id: `taxi-${Date.now()}`,
         bookedSeats: 0,
         bookings: [],
-        imageUrl: `https://picsum.photos/seed/${Date.now()}/600/400`,
-        imageHint: "taxi car",
     };
     setTaxis(prev => [newTaxi, ...prev]);
     toast({ title: "Success", description: `Taxi "${newTaxi.name}" added.` });
@@ -81,7 +79,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
     if (taxi.bookedSeats >= taxi.capacity) {
         setRemainingEmployees(prev => [...prev, currentEmployeeId]);
-        addNotification(`Employee ${currentEmployeeId} was added to the remaining list for taxi "${taxi.name}".`);
+        addNotification(`Employee ${currentEmployeeId} was added to the waiting list for taxi "${taxi.name}".`);
         toast({ title: "Taxi Full", description: "This taxi is full. You have been added to the waiting list." });
         return;
     }

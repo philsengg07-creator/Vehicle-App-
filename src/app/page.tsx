@@ -5,9 +5,14 @@ import { useApp } from '@/hooks/use-app';
 import { Header } from '@/components/fleetnav/Header';
 import { AdminDashboard } from '@/components/fleetnav/AdminDashboard';
 import { EmployeeDashboard } from '@/components/fleetnav/EmployeeDashboard';
+import { RoleSelection } from '@/components/fleetnav/RoleSelection';
 
 function FleetNavApp() {
   const { role } = useApp();
+
+  if (!role) {
+    return <RoleSelection />;
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
