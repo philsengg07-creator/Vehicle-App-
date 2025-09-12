@@ -8,10 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Shield, User } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 export function RoleSelection() {
   const { setEmployee, switchRole } = useApp();
   const [employeeName, setEmployeeName] = useState('');
+  const [adminKey, setAdminKey] = useState('');
+  const { toast } = useToast();
 
   const handleEmployeeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,8 +24,17 @@ export function RoleSelection() {
     }
   };
 
-  const handleAdminSelect = () => {
-    switchRole("admin");
+  const handleAdminSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (adminKey === 'admin@123') {
+        switchRole("admin");
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Invalid Key",
+            description: "The admin key you entered is incorrect.",
+        });
+    }
   };
 
   return (
@@ -56,14 +68,23 @@ export function RoleSelection() {
               </form>
             </TabsContent>
             <TabsContent value="admin" className="pt-6">
-                <Button
-                    className="w-full h-24 text-lg"
-                    variant="outline"
-                    onClick={handleAdminSelect}
-                >
-                    <Shield className="mr-2 h-6 w-6" />
-                    Proceed as Admin
-                </Button>
+                <form onSubmit={handleAdminSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="adminKey">Admin Key</Label>
+                        <Input
+                            id="adminKey"
+                            type="password"
+                            placeholder="Enter admin key"
+                            value={adminKey}
+                            onChange={(e) => setAdminKey(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <Button type="submit" className="w-full">
+                        <Shield className="mr-2 h-4 w-4" />
+                        Proceed as Admin
+                    </Button>
+                </form>
             </TabsContent>
           </Tabs>
         </CardContent>
