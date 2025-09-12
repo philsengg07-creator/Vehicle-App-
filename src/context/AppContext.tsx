@@ -81,16 +81,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         toast({ variant: "destructive", title: "Error", description: "Employee not set." });
         return;
     }
+    
+    const hasBooking = taxis.some(t => t.bookings.some(b => b.employeeId === currentEmployeeId));
+    if (hasBooking) {
+        toast({ variant: "destructive", title: "Already Booked", description: "You already have a booking." });
+        return;
+    }
 
     const taxi = taxis.find(t => t.id === taxiId);
     if (!taxi) {
       toast({ variant: "destructive", title: "Error", description: "Taxi not found." });
       return;
-    }
-
-    if (taxi.bookings.some(b => b.employeeId === currentEmployeeId)) {
-        toast({ variant: "destructive", title: "Already Booked", description: "You have already booked a seat in this taxi." });
-        return;
     }
     
     if (taxi.bookedSeats >= taxi.capacity) {
