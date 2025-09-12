@@ -47,17 +47,11 @@ export function RoleSwitcher() {
                 {role === 'admin' ? 'Admin' : currentEmployeeId}
               </p>
               <p className="text-xs leading-none text-muted-foreground">
-                {role === 'admin' ? 'admin@fleetnav.com' : `${currentEmployeeId.replace(' ', '.').toLowerCase()}@fleetnav.com`}
+                {role === 'admin' ? 'admin@fleetnav.com' : `${currentEmployeeId?.replace(' ', '.').toLowerCase()}@fleetnav.com`}
               </p>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {role === 'employee' && (
-            <DropdownMenuItem onClick={() => handleRoleChange('admin')}>
-              <Shield className="mr-2 h-4 w-4" />
-              <span>Switch to Admin</span>
-            </DropdownMenuItem>
-          )}
           {role === 'admin' && (
             <DropdownMenuItem onClick={() => handleRoleChange('employee')}>
                 <User className="mr-2 h-4 w-4" />
