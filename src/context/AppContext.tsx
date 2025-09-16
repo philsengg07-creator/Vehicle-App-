@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useState, ReactNode, useMemo, useCallback } from 'react';
+import React, { createContext, useState, ReactNode, useMemo, useCallback, useEffect } from 'react';
 import type { UserRole, Taxi, Booking, AppNotification } from '@/types';
 import { INITIAL_TAXIS, INITIAL_REMAINING_EMPLOYEES, INITIAL_NOTIFICATIONS } from '@/lib/data';
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +32,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
   const { toast } = useToast();
   
+  useEffect(() => {
+    const lastResetDate = localStorage.getItem('lastResetDate');
+    const today = new Date().toDateString();
+
+    if (lastResetDate !== today) {
+      // Reset taxis
+      setTaxis(prevTaxis =>
+        prevTaxis.map(taxi => ({
+          ...taxi,
+          bookedSeats: 0,
+          bookings: [],
+        }))
+      );
+      
+      // Reset remaining employees
+      setRemainingEmployees([]);
+
+      // Update the last reset date
+      localStorage.setItem('lastResetDate', today);
+      console.log('Daily booking reset completed.');
+    }
+  }, []);
+
   const switchRole = useCallback((newRole: UserRole) => setRole(newRole), []);
   
   const setEmployee = useCallback((name: string) => {
