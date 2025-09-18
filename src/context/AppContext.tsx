@@ -82,7 +82,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCurrentEmployeeId(null);
   }, []);
 
-  const addNotification = (message: string, shouldPush: boolean = false) => {
+  const addNotification = async (message: string, shouldPush: boolean = false) => {
     const notificationsRef = ref(db, 'notifications');
     const newNotificationRef = push(notificationsRef);
     const newNotification = {
@@ -90,7 +90,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       date: new Date().toISOString(),
       read: false,
     };
-    set(newNotificationRef, newNotification);
+    await set(newNotificationRef, newNotification);
 
     if (shouldPush) {
       sendNotification({ title: 'Taxi Alert', body: message });
@@ -158,7 +158,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const remainingEmployeesRef = ref(db, 'remainingEmployees');
         const newEmployeeRef = push(remainingEmployeesRef);
         await set(newEmployeeRef, currentEmployeeId);
-        addNotification("new employee added to waiting list", true);
+        await addNotification("new employee added to waiting list", true);
         toast({ title: "Taxi Full", description: "This taxi is full. You have been added to the waiting list." });
         return;
     }
@@ -177,7 +177,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await set(child(taxiRef, 'bookedSeats'), updatedBookedSeats);
 
     if (updatedBookedSeats === taxi.capacity) {
-        addNotification(`${taxi.name} is full`, true);
+        await addNotification(`${taxi.name} is full`, true);
     }
     
     toast({ title: "Success!", description: `Your seat in ${taxi.name} is confirmed.` });
