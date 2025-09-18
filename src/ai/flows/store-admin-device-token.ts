@@ -4,7 +4,7 @@
  */
 import { ai } from '@/ai/genkit';
 import { db } from '@/lib/firebase';
-import { ref, push, set, get } from 'firebase/database';
+import { ref, set } from 'firebase/database';
 import { z } from 'genkit';
 
 const StoreAdminDeviceTokenInputSchema = z.object({
@@ -25,19 +25,9 @@ const storeAdminDeviceTokenFlow = ai.defineFlow(
   },
   async ({ token }) => {
     try {
-      const tokensRef = ref(db, 'adminDeviceTokens');
-      const snapshot = await get(tokensRef);
-      const existingTokens = snapshot.val() || {};
-      
-      const tokenExists = Object.values(existingTokens).includes(token);
-
-      if (!tokenExists) {
-        const newTokenRef = push(tokensRef);
-        await set(newTokenRef, token);
-        console.log(`Stored new admin device token in Firebase: ${token}`);
-      } else {
-        console.log(`Admin device token already exists: ${token}`);
-      }
+      const tokenRef = ref(db, 'adminDeviceToken');
+      await set(tokenRef, token);
+      console.log(`Stored last admin device token in Firebase: ${token}`);
     } catch (error) {
       console.error('Error storing admin device token in Firebase:', error);
     }
