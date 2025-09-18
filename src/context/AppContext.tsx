@@ -157,8 +157,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (taxi.bookedSeats >= taxi.capacity) {
         const remainingEmployeesRef = ref(db, 'remainingEmployees');
         const newEmployeeRef = push(remainingEmployeesRef);
-        set(newEmployeeRef, currentEmployeeId);
-        addNotification(`new employee added to waiting list`, true);
+        await set(newEmployeeRef, currentEmployeeId);
+        addNotification("new employee added to waiting list", true);
         toast({ title: "Taxi Full", description: "This taxi is full. You have been added to the waiting list." });
         return;
     }
