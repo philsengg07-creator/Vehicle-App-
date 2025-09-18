@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Taxi } from "@/types";
+import { PushNotifications } from "./PushNotifications";
 
 export function AdminDashboard() {
   const { taxis, remainingEmployees, addTaxi, editTaxi } = useApp();
@@ -36,6 +37,7 @@ export function AdminDashboard() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 py-8">
+      <PushNotifications />
       <div className="lg:col-span-2">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold font-headline">Taxi Fleet</h2>
