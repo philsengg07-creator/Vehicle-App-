@@ -19,7 +19,7 @@ export function PushNotifications() {
             if (permission === 'granted') {
               console.log('Notification permission granted.');
               try {
-                const currentToken = await getToken(messaging, { serviceWorkerRegistration: registration, vapidKey: 'YOUR_VAPID_KEY' });
+                const currentToken = await getToken(messaging, { serviceWorkerRegistration: registration, vapidKey: 'BNn7tq1_bQWAlsB4_g8Awiuq5TQ5Kbu6fPRdD5F-eE6l_acofd0KXBQvKKI2nnFcdMCx3nOgqaQC1hLCCA-lwr4' });
                 if (currentToken) {
                   console.log('FCM Token:', currentToken);
                   // Here you would typically send the token to your server
