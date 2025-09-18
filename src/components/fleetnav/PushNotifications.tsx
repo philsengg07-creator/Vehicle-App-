@@ -37,12 +37,10 @@ export function PushNotifications() {
       if (permissionResult === 'granted') {
         console.log('Notification permission granted.');
         
-        const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-        console.log('Service Worker registration successful, scope is:', registration.scope);
-
+        await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        
         const currentToken = await getToken(messaging, { 
           vapidKey: VAPID_KEY,
-          serviceWorkerRegistration: registration,
         });
 
         if (currentToken) {
