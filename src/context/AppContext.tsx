@@ -201,14 +201,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const markNotificationsAsRead = () => {
     const updates: { [key: string]: any } = {};
-    notifications.forEach(n => {
-      if (!n.read) {
-        updates[`/notifications/${n.id}/read`] = true;
-      }
+    const unreadNotifications = notifications.filter(n => !n.read);
+  
+    if (unreadNotifications.length === 0) return;
+  
+    unreadNotifications.forEach(n => {
+      updates[`/notifications/${n.id}/read`] = true;
     });
-    if (Object.keys(updates).length > 0) {
-      update(ref(db), updates);
-    }
+  
+    update(ref(db), updates).then(() => {
+      setNotifications(prev => 
+        prev.map(n => unreadNotifications.find(un => un.id === n.id) ? { ...n, read: true } : n)
+      );
+    }).catch(error => {
+      console.error("Error marking notifications as read:", error);
+    });
   };
 
   const employeeBookings = useMemo(() => {

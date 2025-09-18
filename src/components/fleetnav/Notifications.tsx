@@ -41,9 +41,15 @@ export function Notifications() {
     }
   };
 
+  const handleOpenChange = (open: boolean) => {
+    if (open && unreadCount > 0) {
+      markNotificationsAsRead();
+    }
+  };
+
   return (
     <>
-      <Popover onOpenChange={(open) => { if(open) markNotificationsAsRead() }}>
+      <Popover onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-5 w-5" />
