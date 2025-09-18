@@ -2,10 +2,20 @@
 import admin from "firebase-admin";
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getDatabase } from "firebase-admin/database";
+import fs from 'fs';
+import path from 'path';
 
 // 1. Initialize with your service account JSON (download from Firebase Console → Project Settings → Service Accounts)
 // Make sure to rename your downloaded key to 'serviceAccountKey.json' and place it in the root directory.
-import serviceAccount from "./serviceAccountKey.json" assert { type: "json" };
+const serviceAccountPath = path.resolve(process.cwd(), 'serviceAccountKey.json');
+let serviceAccount;
+try {
+    serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+} catch (e) {
+    console.error("❌ Could not read or parse serviceAccountKey.json. Make sure the file exists in the project root and is valid JSON.", e);
+    process.exit(1);
+}
+
 
 if (!getApps().length) {
     initializeApp({
