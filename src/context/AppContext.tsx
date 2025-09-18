@@ -93,7 +93,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await set(newNotificationRef, newNotification);
 
     if (shouldPush) {
-      sendNotification({ title: 'Taxi Alert', body: message });
+      try {
+        await sendNotification({ title: 'Taxi Alert', body: message });
+      } catch (error) {
+        console.error("Failed to send push notification:", error);
+        toast({
+          variant: "destructive",
+          title: "Notification Error",
+          description: "Could not send push notification. Please check server logs.",
+        });
+      }
     }
   };
   
