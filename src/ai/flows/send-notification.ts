@@ -60,6 +60,15 @@ const sendNotificationFlow = ai.defineFlow(
     try {
       const response = await getMessaging().sendEachForMulticast(message);
       console.log('Successfully sent message:', response);
+      if (response.failureCount > 0) {
+        const failedTokens: string[] = [];
+        response.responses.forEach((resp, idx) => {
+          if (!resp.success) {
+            failedTokens.push(tokens[idx]);
+          }
+        });
+        console.log('List of tokens that caused failures: ' + failedTokens);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
     }
