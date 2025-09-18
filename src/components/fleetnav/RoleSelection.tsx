@@ -41,7 +41,7 @@ export function RoleSelection() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Welcome to FleetNav</CardTitle>
+          <CardTitle className="text-2xl font-bold">Welcome to Taxi Management</CardTitle>
           <CardDescription>Please select your role to continue.</CardDescription>
         </CardHeader>
         <CardContent className="p-6">
