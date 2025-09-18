@@ -5,7 +5,7 @@ import type { UserRole, Taxi, Booking, AppNotification } from '@/types';
 import { useToast } from "@/hooks/use-toast";
 import { sendNotification } from '@/ai/flows/send-notification';
 import { db } from '@/lib/firebase';
-import { ref, onValue, set, remove, push, get, child, serverTimestamp } from 'firebase/database';
+import { ref, onValue, set, remove, push, get, child, update } from 'firebase/database';
 
 export interface AppContextType {
   role: UserRole | null;
@@ -67,9 +67,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const lastResetDate = snapshot.val();
         const today = new Date().toDateString();
         if (lastResetDate !== today) {
-            set(ref(db, 'taxis'), {});
-            set(ref(db, 'remainingEmployees'), {});
-            set(ref(db, 'lastResetDate'), today);
+            const updates: { [key: string]: any } = {};
+            updates['/taxis'] = {};
+            updates['/remainingEmployees'] = {};
+            updates['/lastResetDate'] = today;
+            update(ref(db), updates);
             console.log('Daily data reset completed.');
         }
     });
@@ -205,7 +207,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     });
     if (Object.keys(updates).length > 0) {
-      set(ref(db), updates);
+      update(ref(db), updates);
     }
   };
 
