@@ -1,5 +1,4 @@
 import type {NextConfig} from 'next';
-import {withServiceWorker} from '@genkit-ai/next';
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -33,4 +32,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withServiceWorker(nextConfig);
+export default nextConfig;
