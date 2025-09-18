@@ -1,5 +1,5 @@
 import type {NextConfig} from 'next';
-import {withServiceWorker} from '@genkit-ai/next/service-worker';
+import {withServiceWorker} from '@genkit-ai/next';
 
 const nextConfig: NextConfig = {
   /* config options here */
