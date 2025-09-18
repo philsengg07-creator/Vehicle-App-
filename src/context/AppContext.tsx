@@ -2,9 +2,10 @@
 
 import React, { createContext, useState, ReactNode, useMemo, useCallback, useEffect } from 'react';
 import type { UserRole, Taxi, Booking, AppNotification } from '@/types';
-import { INITIAL_TAXIS, INITIAL_REMAINING_EMPLOYEES, INITIAL_NOTIFICATIONS } from '@/lib/data';
 import { useToast } from "@/hooks/use-toast";
 import { sendNotification } from '@/ai/flows/send-notification';
+import { db } from '@/lib/firebase';
+import { ref, onValue, set, remove, push, get, child, serverTimestamp } from 'firebase/database';
 
 export interface AppContextType {
   role: UserRole | null;
@@ -28,33 +29,58 @@ export const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<UserRole | null>(null);
   const [currentEmployeeId, setCurrentEmployeeId] = useState<string | null>(null);
-  const [taxis, setTaxis] = useState<Taxi[]>(INITIAL_TAXIS);
-  const [remainingEmployees, setRemainingEmployees] = useState<string[]>(INITIAL_REMAINING_EMPLOYEES);
-  const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
+  const [taxis, setTaxis] = useState<Taxi[]>([]);
+  const [remainingEmployees, setRemainingEmployees] = useState<string[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const { toast } = useToast();
-  
+
   useEffect(() => {
-    const lastResetDate = localStorage.getItem('lastResetDate');
-    const today = new Date().toDateString();
+    const taxisRef = ref(db, 'taxis');
+    const unsubscribeTaxis = onValue(taxisRef, (snapshot) => {
+      const data = snapshot.val();
+      const taxisArray: Taxi[] = data ? Object.keys(data).map(key => ({
+        id: key,
+        ...data[key],
+        bookings: data[key].bookings ? Object.values(data[key].bookings) : [],
+      })) : [];
+      setTaxis(taxisArray);
+    });
 
-    if (lastResetDate !== today) {
-      // Reset taxis
-      setTaxis(prevTaxis =>
-        prevTaxis.map(taxi => ({
-          ...taxi,
-          bookedSeats: 0,
-          bookings: [],
-        }))
-      );
-      
-      // Reset remaining employees
-      setRemainingEmployees([]);
+    const remainingEmployeesRef = ref(db, 'remainingEmployees');
+    const unsubscribeEmployees = onValue(remainingEmployeesRef, (snapshot) => {
+        const data = snapshot.val();
+        setRemainingEmployees(data ? Object.values(data) as string[] : []);
+    });
 
-      // Update the last reset date
-      localStorage.setItem('lastResetDate', today);
-      console.log('Daily booking reset completed.');
-    }
+    const notificationsRef = ref(db, 'notifications');
+    const unsubscribeNotifications = onValue(notificationsRef, (snapshot) => {
+        const data = snapshot.val();
+        const notificationsArray: AppNotification[] = data ? Object.keys(data).map(key => ({
+            id: key,
+            ...data[key]
+        })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
+        setNotifications(notificationsArray);
+    });
+
+    const dailyResetRef = ref(db, 'lastResetDate');
+    get(dailyResetRef).then((snapshot) => {
+        const lastResetDate = snapshot.val();
+        const today = new Date().toDateString();
+        if (lastResetDate !== today) {
+            set(ref(db, 'taxis'), {});
+            set(ref(db, 'remainingEmployees'), {});
+            set(ref(db, 'lastResetDate'), today);
+            console.log('Daily data reset completed.');
+        }
+    });
+
+    return () => {
+      unsubscribeTaxis();
+      unsubscribeEmployees();
+      unsubscribeNotifications();
+    };
   }, []);
+  
 
   const switchRole = useCallback((newRole: UserRole) => setRole(newRole), []);
   
@@ -69,13 +95,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addNotification = (message: string, shouldPush: boolean = false) => {
-    const newNotification: AppNotification = {
-      id: Date.now(),
+    const notificationsRef = ref(db, 'notifications');
+    const newNotificationRef = push(notificationsRef);
+    const newNotification = {
       message,
-      date: new Date(),
+      date: new Date().toISOString(),
       read: false,
     };
-    setNotifications(prev => [newNotification, ...prev]);
+    set(newNotificationRef, newNotification);
 
     if (shouldPush) {
       sendNotification({ title: 'Taxi Alert', body: message }).catch(console.error);
@@ -83,89 +110,110 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
   
   const addTaxi = (taxiData: Omit<Taxi, 'id' | 'bookedSeats' | 'bookings'>) => {
-    const newTaxi: Taxi = {
+    const taxisRef = ref(db, 'taxis');
+    const newTaxiRef = push(taxisRef);
+    const newTaxi = {
         ...taxiData,
-        id: `taxi-${Date.now()}`,
         bookedSeats: 0,
-        bookings: [],
+        bookings: {},
     };
-    setTaxis(prev => [newTaxi, ...prev]);
-    toast({ title: "Success", description: `Taxi "${newTaxi.name}" added.` });
+    set(newTaxiRef, newTaxi);
+    toast({ title: "Success", description: `Taxi "${taxiData.name}" added.` });
   };
 
   const editTaxi = (taxiId: string, data: Partial<Omit<Taxi, 'id' | 'bookedSeats' | 'bookings'>>) => {
-    setTaxis(prev => prev.map(t => t.id === taxiId ? { ...t, ...data } : t));
-    toast({ title: "Success", description: "Taxi details updated." });
+    const taxiRef = ref(db, `taxis/${taxiId}`);
+    get(taxiRef).then(snapshot => {
+      if(snapshot.exists()) {
+        const existingData = snapshot.val();
+        set(taxiRef, { ...existingData, ...data });
+        toast({ title: "Success", description: "Taxi details updated." });
+      }
+    });
   };
 
   const deleteTaxi = (taxiId: string) => {
     const taxiName = taxis.find(t => t.id === taxiId)?.name;
-    setTaxis(prev => prev.filter(t => t.id !== taxiId));
+    const taxiRef = ref(db, `taxis/${taxiId}`);
+    remove(taxiRef);
     toast({ title: "Success", description: `Taxi "${taxiName}" deleted.` });
   };
 
-  const bookSeat = (taxiId: string) => {
+  const bookSeat = async (taxiId: string) => {
     if (!currentEmployeeId) {
         toast({ variant: "destructive", title: "Error", description: "Employee not set." });
         return;
     }
     
-    const hasBooking = taxis.some(t => t.bookings.some(b => b.employeeId === currentEmployeeId));
+    const allTaxisSnapshot = await get(ref(db, 'taxis'));
+    const allTaxis = allTaxisSnapshot.val() || {};
+    const hasBooking = Object.values(allTaxis).some((t: any) => 
+        t.bookings && Object.values(t.bookings).some((b: any) => b.employeeId === currentEmployeeId)
+    );
+
     if (hasBooking) {
         toast({ variant: "destructive", title: "Already Booked", description: "You already have a booking." });
         return;
     }
 
-    const taxi = taxis.find(t => t.id === taxiId);
-    if (!taxi) {
+    const taxiRef = ref(db, `taxis/${taxiId}`);
+    const taxiSnapshot = await get(taxiRef);
+
+    if (!taxiSnapshot.exists()) {
       toast({ variant: "destructive", title: "Error", description: "Taxi not found." });
       return;
     }
     
-    if (taxi.bookedSeats >= taxi.capacity) {
-        setRemainingEmployees(prev => [...prev, currentEmployeeId]);
+    const taxi = { id: taxiId, ...taxiSnapshot.val() };
+
+    if ((taxi.bookedSeats || 0) >= taxi.capacity) {
+        const remainingEmployeesRef = ref(db, 'remainingEmployees');
+        const newEmployeeRef = push(remainingEmployeesRef);
+        set(newEmployeeRef, currentEmployeeId);
         const message = `Employee ${currentEmployeeId} was added to the waiting list for taxi "${taxi.name}".`;
         addNotification(message, true);
         toast({ title: "Taxi Full", description: "This taxi is full. You have been added to the waiting list." });
         return;
     }
     
-    const newBooking: Booking = {
-        id: `booking-${Date.now()}`,
+    const bookingsRef = ref(db, `taxis/${taxiId}/bookings`);
+    const newBookingRef = push(bookingsRef);
+    const newBooking: Omit<Booking, 'id'> = {
         taxiId,
         taxiName: taxi.name,
         employeeId: currentEmployeeId,
-        bookingTime: new Date(),
+        bookingTime: new Date().toISOString() as any, // RTDB will convert to string
     };
+    await set(newBookingRef, newBooking);
     
-    setTaxis(prev => prev.map(t => {
-        if (t.id === taxiId) {
-            const updatedTaxi = {
-                ...t,
-                bookedSeats: t.bookedSeats + 1,
-                bookings: [...t.bookings, newBooking],
-            };
+    const updatedBookedSeats = (taxi.bookedSeats || 0) + 1;
+    await set(child(taxiRef, 'bookedSeats'), updatedBookedSeats);
 
-            if (updatedTaxi.bookedSeats === updatedTaxi.capacity) {
-                const message = `Taxi "${updatedTaxi.name}" is now full.`;
-                addNotification(message, true);
-            }
-
-            return updatedTaxi;
-        }
-        return t;
-    }));
+    if (updatedBookedSeats === taxi.capacity) {
+        const message = `Taxi "${taxi.name}" is now full.`;
+        addNotification(message, true);
+    }
     
     toast({ title: "Success!", description: `Your seat in ${taxi.name} is confirmed.` });
   };
 
   const markNotificationsAsRead = () => {
-    setNotifications(prev => prev.map(n => ({...n, read: true})));
+    const updates: { [key: string]: any } = {};
+    notifications.forEach(n => {
+      if (!n.read) {
+        updates[`/notifications/${n.id}/read`] = true;
+      }
+    });
+    if (Object.keys(updates).length > 0) {
+      set(ref(db), updates);
+    }
   };
 
   const employeeBookings = useMemo(() => {
     if (!currentEmployeeId) return [];
-    return taxis.flatMap(t => t.bookings).filter(b => b.employeeId === currentEmployeeId);
+    return taxis
+        .flatMap(t => t.bookings ? Object.values(t.bookings).map(b => ({...b, taxiName: t.name, taxiId: t.id})) : [])
+        .filter(b => b.employeeId === currentEmployeeId) as Booking[];
   }, [taxis, currentEmployeeId]);
   
   const value = {

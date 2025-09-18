@@ -13,12 +13,12 @@ export interface Booking {
   taxiId: string;
   taxiName: string;
   employeeId: string;
-  bookingTime: Date;
+  bookingTime: string; // Changed to string to match Firebase RTDB
 }
 
 export interface AppNotification {
-  id: number;
+  id: any;
   message: string;
-  date: Date;
+  date: string; // Changed to string to match Firebase RTDB
   read: boolean;
 }

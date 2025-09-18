@@ -70,7 +70,7 @@ export function Notifications() {
                   <div key={notif.id} className="text-sm">
                     <p className="font-medium text-foreground">{notif.message}</p>
                     <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(notif.date, { addSuffix: true })}
+                      {formatDistanceToNow(new Date(notif.date), { addSuffix: true })}
                     </p>
                   </div>
                 ))
