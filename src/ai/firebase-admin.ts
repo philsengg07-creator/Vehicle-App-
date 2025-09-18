@@ -1,7 +1,7 @@
 /**
  * @fileOverview Initializes and provides a singleton instance of the Firebase Admin SDK.
  */
-import { initializeApp, getApps, App, credential } from 'firebase-admin/app';
+import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -23,7 +23,7 @@ function initializeAdminApp() {
         const serviceAccount = JSON.parse(serviceAccountString);
 
         adminApp = initializeApp({
-            credential: credential.cert(serviceAccount),
+            credential: cert(serviceAccount),
             databaseURL: "https://studio-6451719734-ee0cd-default-rtdb.asia-southeast1.firebasedatabase.app"
         });
         console.log("Firebase Admin SDK initialized successfully.");
