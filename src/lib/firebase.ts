@@ -20,5 +20,9 @@ const messaging = typeof window !== 'undefined' ? getMessaging(app) : undefined;
 const installations = typeof window !== 'undefined' ? getInstallations(app) : undefined;
 const db = getDatabase(app);
 
+// This is a placeholder. In a real app, you would generate this in the Firebase Console
+// under Project Settings > Cloud Messaging > Web configuration.
+const VAPID_KEY = "BNn7tq1_bQWAlsB4_g8Awiuq5TQ5Kbu6fPRdD5F-eE6l_acofd0KXBQvKKI2nnFcdMCx3nOgqaQC1hLCCA-lwr4";
 
-export { app, messaging, installations, db };
+
+export { app, messaging, installations, db, VAPID_KEY };

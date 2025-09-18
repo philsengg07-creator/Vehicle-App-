@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { messaging } from '@/lib/firebase';
+import { messaging, VAPID_KEY } from '@/lib/firebase';
 import { getToken } from 'firebase/messaging';
 import { useToast } from '@/hooks/use-toast';
 import { storeAdminDeviceToken } from '@/ai/flows/store-admin-device-token';
@@ -41,7 +41,7 @@ export function PushNotifications() {
         console.log('Service Worker registration successful, scope is:', registration.scope);
 
         const currentToken = await getToken(messaging, { 
-          vapidKey: 'BNn7tq1_bQWAlsB4_g8Awiuq5TQ5Kbu6fPRdD5F-eE6l_acofd0KXBQvKKI2nnFcdMCx3nOgqaQC1hLCCA-lwr4',
+          vapidKey: VAPID_KEY,
           serviceWorkerRegistration: registration,
         });
 
