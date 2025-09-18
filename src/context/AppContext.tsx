@@ -62,20 +62,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setNotifications(notificationsArray);
     });
 
-    const dailyResetRef = ref(db, 'lastResetDate');
-    get(dailyResetRef).then((snapshot) => {
-        const lastResetDate = snapshot.val();
-        const today = new Date().toDateString();
-        if (lastResetDate !== today) {
-            const updates: { [key: string]: any } = {};
-            updates['/taxis'] = {};
-            updates['/remainingEmployees'] = {};
-            updates['/lastResetDate'] = today;
-            update(ref(db), updates);
-            console.log('Daily data reset completed.');
-        }
-    });
-
     return () => {
       unsubscribeTaxis();
       unsubscribeEmployees();
@@ -107,7 +93,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     set(newNotificationRef, newNotification);
 
     if (shouldPush) {
-      sendNotification({ title: 'Taxi Alert', body: message }).catch(console.error);
+      sendNotification({ title: 'Taxi Alert', body: message });
     }
   };
   
@@ -168,12 +154,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
     const taxi = { id: taxiId, ...taxiSnapshot.val() };
 
-    if ((taxi.bookedSeats || 0) >= taxi.capacity) {
+    if (taxi.bookedSeats >= taxi.capacity) {
         const remainingEmployeesRef = ref(db, 'remainingEmployees');
         const newEmployeeRef = push(remainingEmployeesRef);
         set(newEmployeeRef, currentEmployeeId);
-        const message = `Employee ${currentEmployeeId} was added to the waiting list for taxi "${taxi.name}".`;
-        addNotification(message, true);
+        addNotification(`Employee ${currentEmployeeId} was added to the waiting list for taxi "${taxi.name}".`, true);
         toast({ title: "Taxi Full", description: "This taxi is full. You have been added to the waiting list." });
         return;
     }
@@ -188,12 +173,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     await set(newBookingRef, newBooking);
     
-    const updatedBookedSeats = (taxi.bookedSeats || 0) + 1;
+    const updatedBookedSeats = taxi.bookedSeats + 1;
     await set(child(taxiRef, 'bookedSeats'), updatedBookedSeats);
 
     if (updatedBookedSeats === taxi.capacity) {
-        const message = `Taxi "${taxi.name}" is now full.`;
-        addNotification(message, true);
+        addNotification(`Taxi "${taxi.name}" is now full.`, true);
     }
     
     toast({ title: "Success!", description: `Your seat in ${taxi.name} is confirmed.` });

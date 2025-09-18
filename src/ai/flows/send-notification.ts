@@ -7,19 +7,15 @@ import { db } from '@/lib/firebase';
 import { ref, get } from 'firebase/database';
 import { z } from 'genkit';
 import { getMessaging } from 'firebase-admin/messaging';
-import { initializeApp, getApps, App } from 'firebase-admin/app';
+import { initializeApp, getApps } from 'firebase-admin/app';
 
 const SendNotificationInputSchema = z.object({
   title: z.string().describe('The title of the notification.'),
   body: z.string().describe('The body of the notification.'),
 });
 
-let fcmApp: App | undefined = getApps().find(a => a.name === 'fcm');
-if (!fcmApp) {
-  fcmApp = initializeApp(
-    { projectId: process.env.FIREBASE_PROJECT_ID },
-    'fcm'
-  );
+if (getApps().length === 0) {
+  initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID });
 }
 
 export async function sendNotification(
@@ -62,17 +58,8 @@ const sendNotificationFlow = ai.defineFlow(
     };
 
     try {
-      const response = await getMessaging(fcmApp).sendEachForMulticast(message);
+      const response = await getMessaging().sendEachForMulticast(message);
       console.log('Successfully sent message:', response);
-       if (response.failureCount > 0) {
-        const failedTokens: string[] = [];
-        response.responses.forEach((resp, idx) => {
-          if (!resp.success) {
-            failedTokens.push(tokens[idx]);
-          }
-        });
-        console.log('List of tokens that caused failures: ' + failedTokens);
-      }
     } catch (error) {
       console.error('Error sending message:', error);
     }
