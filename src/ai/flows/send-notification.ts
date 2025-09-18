@@ -3,11 +3,10 @@
  * @fileOverview A Genkit flow for sending push notifications to admins.
  */
 import { ai } from '@/ai/genkit';
-import { db } from '@/lib/firebase';
-import { ref, get } from 'firebase/database';
 import { z } from 'genkit';
 import { getMessaging } from 'firebase-admin/messaging';
 import { initializeApp, getApps, App, credential } from 'firebase-admin/app';
+import { getDatabase as getAdminDatabase } from 'firebase-admin/database';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -51,8 +50,9 @@ export async function sendNotification(
 }
 
 const getAdminToken = async (): Promise<string | null> => {
-    const tokenRef = ref(db, 'adminDeviceToken');
-    const snapshot = await get(tokenRef);
+    const adminDb = getAdminDatabase(adminApp);
+    const tokenRef = adminDb.ref('adminDeviceToken');
+    const snapshot = await tokenRef.once('value');
     if (snapshot.exists()) {
         const token = snapshot.val();
         return token;
