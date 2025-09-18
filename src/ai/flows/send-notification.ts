@@ -8,6 +8,7 @@ import { ref, get } from 'firebase/database';
 import { z } from 'genkit';
 import { getMessaging } from 'firebase-admin/messaging';
 import { initializeApp, getApps, App, credential } from 'firebase-admin/app';
+import * as fs from 'fs';
 
 const SendNotificationInputSchema = z.object({
   title: z.string().describe('The title of the notification.'),
@@ -15,23 +16,24 @@ const SendNotificationInputSchema = z.object({
 });
 
 // Ensure Firebase Admin is initialized only once.
-// This is a critical change to prevent re-initialization on every call.
 function getAdminApp(): App {
     if (getApps().length > 0) {
         return getApps()[0];
     }
 
-    // Check if the service account environment variable is set
-    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-        throw new Error('FIREBASE_SERVICE_ACCOUNT environment variable is not set. Cannot initialize Firebase Admin SDK.');
+    let serviceAccount;
+    try {
+        // The service account key is read from the filesystem.
+        const serviceAccountString = fs.readFileSync('ServiceAccountKey.json', 'utf8');
+        serviceAccount = JSON.parse(serviceAccountString);
+    } catch (e) {
+        console.error("Could not read or parse ServiceAccountKey.json for Firebase Admin SDK.", e);
+        throw new Error("Firebase Admin SDK setup failed. The ServiceAccountKey.json file might be missing or invalid.");
     }
-    
-    // Parse the service account key from the environment variable
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
     return initializeApp({
         credential: credential.cert(serviceAccount),
-        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL
+        databaseURL: "https://studio-6451719734-ee0cd-default-rtdb.asia-southeast1.firebasedatabase.app"
     });
 }
 
