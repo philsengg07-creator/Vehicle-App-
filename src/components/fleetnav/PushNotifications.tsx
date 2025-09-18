@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { messaging } from '@/lib/firebase';
 import { getToken } from 'firebase/messaging';
 import { useToast } from '@/hooks/use-toast';
+import { storeAdminDeviceToken } from '@/ai/flows/store-admin-device-token';
 
 export function PushNotifications() {
   const { toast } = useToast();
@@ -22,9 +23,9 @@ export function PushNotifications() {
                 const currentToken = await getToken(messaging, { serviceWorkerRegistration: registration, vapidKey: 'BNn7tq1_bQWAlsB4_g8Awiuq5TQ5Kbu6fPRdD5F-eE6l_acofd0KXBQvKKI2nnFcdMCx3nOgqaQC1hLCCA-lwr4' });
                 if (currentToken) {
                   console.log('FCM Token:', currentToken);
-                  // Here you would typically send the token to your server
-                  // to store it for sending notifications later.
-                  // For this demo, we'll just log it.
+                  // Send the token to the server to be stored
+                  await storeAdminDeviceToken({ token: currentToken });
+                  console.log('Admin device token stored on server.');
                 } else {
                   console.log('No registration token available. Request permission to generate one.');
                 }

@@ -4,6 +4,7 @@ import React, { createContext, useState, ReactNode, useMemo, useCallback, useEff
 import type { UserRole, Taxi, Booking, AppNotification } from '@/types';
 import { INITIAL_TAXIS, INITIAL_REMAINING_EMPLOYEES, INITIAL_NOTIFICATIONS } from '@/lib/data';
 import { useToast } from "@/hooks/use-toast";
+import { sendNotification } from '@/ai/flows/send-notification';
 
 export interface AppContextType {
   role: UserRole | null;
@@ -67,7 +68,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCurrentEmployeeId(null);
   }, []);
 
-  const addNotification = (message: string) => {
+  const addNotification = (message: string, shouldPush: boolean = false) => {
     const newNotification: AppNotification = {
       id: Date.now(),
       message,
@@ -75,6 +76,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       read: false,
     };
     setNotifications(prev => [newNotification, ...prev]);
+
+    if (shouldPush) {
+      sendNotification({ title: 'Taxi Alert', body: message }).catch(console.error);
+    }
   };
   
   const addTaxi = (taxiData: Omit<Taxi, 'id' | 'bookedSeats' | 'bookings'>) => {
@@ -119,7 +124,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
     if (taxi.bookedSeats >= taxi.capacity) {
         setRemainingEmployees(prev => [...prev, currentEmployeeId]);
-        addNotification(`Employee ${currentEmployeeId} was added to the waiting list for taxi "${taxi.name}".`);
+        const message = `Employee ${currentEmployeeId} was added to the waiting list for taxi "${taxi.name}".`;
+        addNotification(message, true);
         toast({ title: "Taxi Full", description: "This taxi is full. You have been added to the waiting list." });
         return;
     }
@@ -141,7 +147,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             };
 
             if (updatedTaxi.bookedSeats === updatedTaxi.capacity) {
-                addNotification(`Taxi "${updatedTaxi.name}" is now full.`);
+                const message = `Taxi "${updatedTaxi.name}" is now full.`;
+                addNotification(message, true);
             }
 
             return updatedTaxi;

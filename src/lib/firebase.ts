@@ -1,6 +1,8 @@
 // src/lib/firebase.ts
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getMessaging } from 'firebase/messaging';
+import { getInstallations } from 'firebase/installations';
+
 
 const firebaseConfig = {
   apiKey: "AIzaSyAdJXY7HLBRqWzur4JH3FNuVOCe_ItTyOk",
@@ -13,5 +15,7 @@ const firebaseConfig = {
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const messaging = typeof window !== 'undefined' ? getMessaging(app) : undefined;
+const installations = typeof window !== 'undefined' ? getInstallations(app) : undefined;
 
-export { app, messaging };
+
+export { app, messaging, installations };
