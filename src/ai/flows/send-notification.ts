@@ -3,7 +3,8 @@
  * @fileOverview A Genkit flow for sending push notifications to admins.
  */
 import { ai } from '@/ai/genkit';
-import { getAdminTokens } from '@/services/token-service';
+import { db } from '@/lib/firebase';
+import { ref, get } from 'firebase/database';
 import { z } from 'genkit';
 import { getMessaging } from 'firebase-admin/messaging';
 import { initializeApp, getApps, App } from 'firebase-admin/app';
@@ -27,6 +28,18 @@ export async function sendNotification(
   return sendNotificationFlow(input);
 }
 
+const getAdminTokens = async (): Promise<string[]> => {
+    const tokensRef = ref(db, 'adminDeviceTokens');
+    const snapshot = await get(tokensRef);
+    if (snapshot.exists()) {
+        const tokensObject = snapshot.val();
+        // Firebase returns an object of unique keys, so we get the values.
+        return Object.values(tokensObject) as string[];
+    }
+    return [];
+};
+
+
 const sendNotificationFlow = ai.defineFlow(
   {
     name: 'sendNotificationFlow',
@@ -34,7 +47,7 @@ const sendNotificationFlow = ai.defineFlow(
     outputSchema: z.void(),
   },
   async ({ title, body }) => {
-    const tokens = getAdminTokens();
+    const tokens = await getAdminTokens();
     if (tokens.length === 0) {
       console.log('No admin device tokens to send notification to.');
       return;
