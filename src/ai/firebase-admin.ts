@@ -14,13 +14,22 @@ function initializeAdminApp() {
     }
 
     try {
-        const serviceAccountPath = path.resolve(process.cwd(), 'ServiceAccountKey.json');
-        if (!fs.existsSync(serviceAccountPath)) {
-            throw new Error("ServiceAccountKey.json not found. Please download it from your Firebase project settings and place it in the project root.");
+        let serviceAccount: any;
+
+        // Production-safe: Use environment variable if available.
+        if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+            console.log("Initializing Firebase Admin SDK from environment variable.");
+            serviceAccount = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+        } else {
+            // Fallback for local development: Read from file.
+            console.log("Initializing Firebase Admin SDK from local ServiceAccountKey.json.");
+            const serviceAccountPath = path.resolve(process.cwd(), 'ServiceAccountKey.json');
+            if (!fs.existsSync(serviceAccountPath)) {
+                throw new Error("ServiceAccountKey.json not found. For production, set GOOGLE_APPLICATION_CREDENTIALS_JSON. For local dev, place the file in the project root.");
+            }
+            const serviceAccountString = fs.readFileSync(serviceAccountPath, 'utf8');
+            serviceAccount = JSON.parse(serviceAccountString);
         }
-        
-        const serviceAccountString = fs.readFileSync(serviceAccountPath, 'utf8');
-        const serviceAccount = JSON.parse(serviceAccountString);
 
         adminApp = initializeApp({
             credential: cert(serviceAccount),
@@ -28,8 +37,8 @@ function initializeAdminApp() {
         });
         console.log("Firebase Admin SDK initialized successfully.");
 
-    } catch (e) {
-        console.error("Could not initialize Firebase Admin SDK. The ServiceAccountKey.json file might be missing or invalid.", e);
+    } catch (e: any) {
+        console.error("Could not initialize Firebase Admin SDK.", e.message);
         // We throw an error to prevent the app from running in a broken state.
         throw new Error("Firebase Admin SDK initialization failed.");
     }
