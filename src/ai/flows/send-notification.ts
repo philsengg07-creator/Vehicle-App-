@@ -19,19 +19,15 @@ export async function sendNotification(
   return sendNotificationFlow(input);
 }
 
-const getAdminTokens = async (): Promise<string[]> => {
+const getAdminToken = async (): Promise<string | null> => {
     const adminApp = getAdminApp();
     const adminDb = getDatabase(adminApp);
-    const tokensRef = adminDb.ref('adminDeviceTokens');
-    const snapshot = await tokensRef.once('value');
+    const tokenRef = adminDb.ref('adminDeviceToken');
+    const snapshot = await tokenRef.once('value');
     if (snapshot.exists()) {
-        const tokensObject = snapshot.val();
-        // Firebase returns an object with push IDs as keys. We need the values.
-        const tokens = Object.values(tokensObject) as string[];
-        return tokens.filter(token => typeof token === 'string');
+        return snapshot.val();
     }
-    console.log('No admin device tokens found in Realtime Database.');
-    return [];
+    return null;
 };
 
 
@@ -42,9 +38,9 @@ const sendNotificationFlow = ai.defineFlow(
     outputSchema: z.void(),
   },
   async ({ title, body }) => {
-    const tokens = await getAdminTokens();
-    if (tokens.length === 0) {
-      console.log('No admin device tokens found. Cannot send notification.');
+    const token = await getAdminToken();
+    if (!token) {
+      console.log('No admin device token found. Cannot send notification.');
       return;
     }
 
@@ -53,39 +49,13 @@ const sendNotificationFlow = ai.defineFlow(
         title,
         body,
       },
+      token: token,
     };
 
     try {
       const adminApp = getAdminApp();
-      // Use sendToDevice for multiple tokens
-      const response = await getMessaging(adminApp).sendToDevice(tokens, message);
+      const response = await getMessaging(adminApp).send(message);
       console.log('Successfully sent message:', response);
-      
-      // Optional: Clean up invalid tokens from DB
-      const tokensToRemove: Promise<void>[] = [];
-      response.results.forEach((result, index) => {
-        const error = result.error;
-        if (error) {
-          console.error('Failure sending notification to', tokens[index], error);
-          // Cleanup the tokens who are not registered anymore.
-          if (
-            error.code === 'messaging/invalid-registration-token' ||
-            error.code === 'messaging/registration-token-not-registered'
-          ) {
-            // Find the key of the invalid token and remove it
-            const tokenToRemove = tokens[index];
-            const tokensRef = getDatabase(adminApp).ref('adminDeviceTokens');
-            tokensRef.orderByValue().equalTo(tokenToRemove).once('value', (snapshot) => {
-                if (snapshot.exists()) {
-                    const keyToRemove = Object.keys(snapshot.val())[0];
-                    tokensToRemove.push(tokensRef.child(keyToRemove).remove());
-                }
-            });
-          }
-        }
-      });
-      await Promise.all(tokensToRemove);
-
     } catch (error) {
       console.error('Error sending message via Admin SDK:', error);
       // Re-throw to make failures visible.

@@ -27,18 +27,9 @@ const storeAdminDeviceTokenFlow = ai.defineFlow(
     try {
       const adminApp = getAdminApp();
       const db = getDatabase(adminApp);
-      const tokensRef = db.ref('adminDeviceTokens');
-
-      // Check if the token already exists
-      const snapshot = await tokensRef.orderByValue().equalTo(token).once('value');
-
-      if (!snapshot.exists()) {
-        // If it doesn't exist, push the new token to the list
-        await tokensRef.push(token);
-        console.log(`Stored new admin device token in Firebase: ${token}`);
-      } else {
-        console.log(`Token already exists, no need to store: ${token}`);
-      }
+      const tokenRef = db.ref('adminDeviceToken');
+      await tokenRef.set(token);
+      console.log(`Stored new admin device token in Firebase: ${token}`);
     } catch (error) {
       console.error('Error storing admin device token in Firebase:', error);
       // Re-throw the error to make it visible in server logs
