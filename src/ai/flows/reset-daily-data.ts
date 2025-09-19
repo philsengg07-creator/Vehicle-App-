@@ -20,18 +20,20 @@ const resetDailyDataFlow = ai.defineFlow(
   },
   async () => {
     try {
+      console.log('Running resetDailyDataFlow...');
       const adminApp = getAdminApp();
       const db = getDatabase(adminApp);
       
-      const updates: { [key: string]: null } = {};
-
       const taxisRef = db.ref('taxis');
       const taxisSnapshot = await taxisRef.once('value');
+
+      const updates: { [key: string]: any } = {};
+
       if (taxisSnapshot.exists()) {
         const taxis = taxisSnapshot.val();
         for (const taxiId in taxis) {
           updates[`/taxis/${taxiId}/bookings`] = null;
-          updates[`/taxis/${taxiId}/bookedSeats`] = null; // Will be set to 0
+          updates[`/taxis/${taxiId}/bookedSeats`] = 0;
         }
       }
 
@@ -39,20 +41,11 @@ const resetDailyDataFlow = ai.defineFlow(
       updates['/notifications'] = null;
 
       await db.ref().update(updates);
-      
-      // Setting bookedSeats to 0 after clearing them
-      const seatUpdates: { [key: string]: number } = {};
-      if (taxisSnapshot.exists()) {
-        const taxis = taxisSnapshot.val();
-        for (const taxiId in taxis) {
-            seatUpdates[`/taxis/${taxiId}/bookedSeats`] = 0;
-        }
-        await db.ref().update(seatUpdates);
-      }
 
       console.log('Daily data reset successfully.');
     } catch (error) {
       console.error('Error resetting daily data:', error);
+      // Re-throw the error to ensure the client-side catch block is triggered.
       throw new Error('Failed to reset daily data.');
     }
   }
