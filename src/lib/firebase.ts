@@ -5,7 +5,7 @@ import { getMessaging } from 'firebase/messaging';
 import { getInstallations } from 'firebase/installations';
 
 
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyAdJXY7HLBRqWzur4JH3FNuVOCe_ItTyOk",
   authDomain: "studio-6451719734-ee0cd.firebaseapp.com",
   projectId: "studio-6451719734-ee0cd",

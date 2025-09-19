@@ -1,9 +1,10 @@
 
-// Use importScripts to load the Firebase SDK
+// DO NOT USE import/export
+// This file is a service worker and must use importScripts.
 importScripts("https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js");
 
-// Your web app's Firebase configuration
+// This config is replaced by a build script, do not change it manually
 const firebaseConfig = {
   apiKey: "AIzaSyAdJXY7HLBRqWzur4JH3FNuVOCe_ItTyOk",
   authDomain: "studio-6451719734-ee0cd.firebaseapp.com",
@@ -14,14 +15,15 @@ const firebaseConfig = {
   databaseURL: "https://studio-6451719734-ee0cd-default-rtdb.asia-southeast1.firebasedatabase.app/"
 };
 
-// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 
-// Retrieve an instance of Firebase Messaging so that it can handle background messages.
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  console.log("📩 [firebase-messaging-sw.js] Background message received:", payload);
+  console.log(
+    "[firebase-messaging-sw.js] Received background message ",
+    payload
+  );
   
   const notificationTitle = payload.notification.title;
   const notificationOptions = {
