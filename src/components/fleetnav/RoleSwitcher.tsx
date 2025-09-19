@@ -58,12 +58,6 @@ export function RoleSwitcher() {
                 <span>Switch to Employee</span>
             </DropdownMenuItem>
           )}
-          {role === 'employee' && (
-            <DropdownMenuItem onClick={() => handleRoleChange('admin')}>
-                <Shield className="mr-2 h-4 w-4" />
-                <span>Switch to Admin</span>
-            </DropdownMenuItem>
-          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => logout()}>
             <LogOut className="mr-2 h-4 w-4" />
