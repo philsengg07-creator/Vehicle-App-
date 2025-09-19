@@ -3,22 +3,40 @@
 
 import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { storeAdminDeviceToken } from '@/ai/flows/store-admin-device-token';
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import { app, VAPID_KEY } from "@/lib/firebase";
+
+async function storeAdminDeviceToken(token: string) {
+    try {
+        const response = await fetch('/api/store-token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ token }),
+        });
+
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || 'Failed to store token on server');
+        }
+        console.log("✅ Token stored on the server via API route.");
+    } catch (error) {
+        console.error("Error storing admin device token:", error);
+        // Optionally show a toast to the user
+    }
+}
 
 export function PushNotifications() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // This effect should only run once on the client.
     if (typeof window === 'undefined' || !('Notification' in window)) {
         return;
     }
 
     const messaging = getMessaging(app);
 
-    // Handler for messages received while the app is in the foreground.
     onMessage(messaging, (payload) => {
       console.log("📩 Foreground message received:", payload);
       toast({
@@ -27,7 +45,6 @@ export function PushNotifications() {
       });
     });
 
-    // Function to request permission and get token
     const requestPermissionAndGetToken = async () => {
       try {
         const permission = await Notification.requestPermission();
@@ -40,8 +57,7 @@ export function PushNotifications() {
 
           if (token) {
             console.log("✅ Token:", token);
-            await storeAdminDeviceToken({ token: token });
-            console.log("✅ Token stored on the server.");
+            await storeAdminDeviceToken(token);
           } else {
             console.log("❌ Could not get token.");
           }
@@ -53,8 +69,7 @@ export function PushNotifications() {
     
     requestPermissionAndGetToken();
 
-  }, []); // Empty dependency array ensures this runs only once.
+  }, [toast]);
 
-  // This component does not render anything to the DOM.
   return null;
 }

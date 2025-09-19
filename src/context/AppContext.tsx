@@ -1,12 +1,35 @@
+
 'use client';
 
 import React, { createContext, useState, ReactNode, useMemo, useCallback, useEffect } from 'react';
 import type { UserRole, Taxi, Booking, AppNotification } from '@/types';
 import { useToast } from "@/hooks/use-toast";
-import { sendNotification } from '@/ai/flows/send-notification';
 import { db } from '@/lib/firebase';
-import { ref, onValue, set, remove, push, get, child, update } from 'firebase/database';
-import { resetDailyData } from '@/ai/flows/reset-daily-data';
+import { ref, onValue, set, remove, push, get, update } from 'firebase/database';
+
+async function sendNotification(title: string, body: string) {
+    const response = await fetch('/api/send-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, body }),
+    });
+
+    if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to send notification');
+    }
+}
+
+async function resetDailyData() {
+    const response = await fetch('/api/reset-data', {
+        method: 'POST'
+    });
+
+    if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to reset data');
+    }
+}
 
 export interface AppContextType {
   role: UserRole | null;
@@ -91,7 +114,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       unsubscribeEmployees();
       unsubscribeNotifications();
     };
-  }, []);
+  }, [toast]);
   
 
   const switchRole = useCallback((newRole: UserRole) => setRole(newRole), []);
@@ -118,7 +141,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     if (shouldPush) {
       try {
-        await sendNotification({ title: 'Taxi Alert', body: message });
+        await sendNotification('Taxi Alert', message);
       } catch (error) {
         console.error("Failed to send push notification:", error);
         toast({
@@ -147,7 +170,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     get(taxiRef).then(snapshot => {
       if(snapshot.exists()) {
         const existingData = snapshot.val();
-        set(taxiRef, { ...existingData, ...data });
+        update(taxiRef, { ...existingData, ...data });
         toast({ title: "Success", description: "Taxi details updated." });
       }
     });
@@ -191,7 +214,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const remainingEmployeesRef = ref(db, 'remainingEmployees');
         const newEmployeeRef = push(remainingEmployeesRef);
         await set(newEmployeeRef, currentEmployeeId);
-        await addNotification("new employee added to waiting list", true);
+        await addNotification("A new employee was added to the waiting list.", true);
         toast({ title: "Taxi Full", description: "This taxi is full. You have been added to the waiting list." });
         return;
     }
@@ -202,15 +225,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         taxiId,
         taxiName: taxi.name,
         employeeId: currentEmployeeId,
-        bookingTime: new Date().toISOString() as any, // RTDB will convert to string
+        bookingTime: new Date().toISOString()
     };
     await set(newBookingRef, newBooking);
     
     const updatedBookedSeats = taxi.bookedSeats + 1;
-    await set(child(taxiRef, 'bookedSeats'), updatedBookedSeats);
+    await update(taxiRef, { bookedSeats: updatedBookedSeats });
 
     if (updatedBookedSeats === taxi.capacity) {
-        await addNotification(`${taxi.name} is full`, true);
+        await addNotification(`The taxi "${taxi.name}" is now full.`, true);
     }
     
     toast({ title: "Success!", description: `Your seat in ${taxi.name} is confirmed.` });
