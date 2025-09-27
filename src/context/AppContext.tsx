@@ -6,7 +6,7 @@ import type { UserRole, Taxi, Booking, AppNotification } from '@/types';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/lib/firebase';
 import { ref, onValue, set, remove, push, get, update } from 'firebase/database';
-import { sendNotification as sendPushNotification } from '@/app/actions/notificationActions';
+import { sendNotification as sendPushNotification } from '@/app/actions/sendNotification';
 
 export interface AppContextType {
   role: UserRole | null;
