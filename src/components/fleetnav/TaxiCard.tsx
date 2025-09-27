@@ -61,7 +61,7 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
         {taxi.bookings.length > 0 ? (
           <ul className="space-y-2 pt-4">
             {taxi.bookings.map((booking) => (
-              <li key={booking.id} className="flex items-center text-sm p-3 bg-secondary rounded-md font-medium">
+              <li key={`${booking.id}-${booking.employeeId}`} className="flex items-center text-sm p-3 bg-secondary rounded-md font-medium">
                 {booking.employeeId}
               </li>
             ))}
