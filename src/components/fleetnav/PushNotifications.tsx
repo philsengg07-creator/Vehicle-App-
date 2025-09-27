@@ -5,27 +5,7 @@ import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import { app, VAPID_KEY } from "@/lib/firebase";
-
-async function storeAdminDeviceToken(token: string) {
-    try {
-        const response = await fetch('/api/store-token', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ token }),
-        });
-
-        if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.error || 'Failed to store token on server');
-        }
-        console.log("✅ Token stored on the server via API route.");
-    } catch (error) {
-        console.error("Error storing admin device token:", error);
-        // Optionally show a toast to the user
-    }
-}
+import { storeAdminDeviceToken } from '@/app/actions/notificationActions';
 
 export function PushNotifications() {
   const { toast } = useToast();
@@ -57,7 +37,12 @@ export function PushNotifications() {
 
           if (token) {
             console.log("✅ Token:", token);
-            await storeAdminDeviceToken(token);
+            const result = await storeAdminDeviceToken(token);
+            if(result.success) {
+              console.log("✅ Token stored on the server via Server Action.");
+            } else {
+              throw new Error(result.error || 'Failed to store token on server');
+            }
           } else {
             console.log("❌ Could not get token.");
           }
