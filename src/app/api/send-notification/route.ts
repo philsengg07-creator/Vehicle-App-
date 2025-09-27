@@ -1,34 +1,40 @@
 
 import { NextResponse } from "next/server";
 import { getAdminApp } from "@/lib/firebaseAdmin";
-import { getDatabase } from "firebase-admin/database";
+import { getDatabase, ref, get } from "firebase-admin/database";
 import { getMessaging } from "firebase-admin/messaging";
 
 export async function POST(req: Request) {
   try {
     const { title, body } = await req.json();
 
-    const db = getDatabase(getAdminApp());
-    const tokenRef = db.ref("adminDeviceToken");
-    const snapshot = await tokenRef.once("value");
+    const adminApp = getAdminApp();
+    const db = getDatabase(adminApp);
+    const tokensRef = ref(db, "deviceTokens");
+    const snapshot = await get(tokensRef);
 
     if (!snapshot.exists()) {
-      console.log('No admin device token found. Cannot send notification.');
-      // Not an error, just no-op
-      return NextResponse.json({ success: true, message: "No token found" });
+      console.log('No admin device tokens found. Cannot send notification.');
+      return NextResponse.json({ success: true, message: "No tokens found" });
     }
 
-    const token = snapshot.val();
+    const tokensData = snapshot.val();
+    const tokens = Object.values(tokensData) as string[];
+
+    if (tokens.length === 0) {
+      console.log('No admin device tokens found. Cannot send notification.');
+      return NextResponse.json({ success: true, message: "No tokens found" });
+    }
+
     const message = {
       notification: {
         title,
         body,
       },
-      token: token,
     };
 
-    const messaging = getMessaging(getAdminApp());
-    const response = await messaging.send(message);
+    const messaging = getMessaging(adminApp);
+    const response = await messaging.sendToDevice(tokens, message);
     console.log('Successfully sent message via API Route:', response);
 
     return NextResponse.json({ success: true });

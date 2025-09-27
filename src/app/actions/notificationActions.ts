@@ -9,25 +9,32 @@ const MAX_TOKENS = 5;
 export async function storeAdminDeviceToken(token: string) {
   try {
     const db = getDatabase(getAdminApp());
-    const tokensRef = ref(db, "adminDeviceTokens");
+    const tokensRef = ref(db, "deviceTokens");
     
     const snapshot = await get(tokensRef);
-    let currentTokens: string[] = snapshot.val() || [];
+    let currentTokens: string[] = snapshot.val() ? Object.values(snapshot.val()) : [];
 
-    // Remove the token if it already exists to move it to the end (most recent)
-    currentTokens = currentTokens.filter(t => t !== token);
-    
-    // Add the new token to the end of the list
-    currentTokens.push(token);
-
-    // If the list is over the max size, remove the oldest token(s) from the start
-    if (currentTokens.length > MAX_TOKENS) {
-      currentTokens = currentTokens.slice(currentTokens.length - MAX_TOKENS);
+    if (currentTokens.includes(token)) {
+      console.log("Token already exists.");
+      return { success: true, message: "Token already exists." };
     }
     
-    await set(tokensRef, currentTokens);
+    // Add the new token
+    const newTokensRef = push(tokensRef);
+    await set(newTokensRef, token);
+    
+    // Check if over limit after adding, and remove oldest if so
+    const allTokensSnapshot = await get(tokensRef);
+    const allTokens = allTokensSnapshot.val();
+    const tokenKeys = Object.keys(allTokens);
+    
+    if(tokenKeys.length > MAX_TOKENS) {
+        const oldestTokenKey = tokenKeys[0];
+        await set(ref(db, `deviceTokens/${oldestTokenKey}`), null);
+        console.log(`Removed oldest token to maintain limit of ${MAX_TOKENS}.`);
+    }
 
-    console.log(`Stored new admin device token. Current list size: ${currentTokens.length}`);
+    console.log(`Stored new admin device token. Current list size: ${tokenKeys.length}`);
     return { success: true };
   } catch (err: any) {
     console.error("Store token error:", err);
@@ -37,8 +44,9 @@ export async function storeAdminDeviceToken(token: string) {
 
 export async function sendNotification(title: string, body: string) {
   try {
-    const db = getDatabase(getAdminApp());
-    const tokensRef = ref(db, "adminDeviceTokens");
+    const adminApp = getAdminApp();
+    const db = getDatabase(adminApp);
+    const tokensRef = ref(db, "deviceTokens");
     const snapshot = await get(tokensRef);
 
     if (!snapshot.exists()) {
@@ -46,8 +54,11 @@ export async function sendNotification(title: string, body: string) {
       return { success: true, message: "No tokens found" };
     }
 
-    const tokens = snapshot.val();
-    if (!Array.isArray(tokens) || tokens.length === 0) {
+    const tokensData = snapshot.val();
+    const tokens = Object.values(tokensData) as string[];
+    const tokenKeys = Object.keys(tokensData);
+    
+    if (tokens.length === 0) {
       console.log('No admin device tokens found. Cannot send notification.');
       return { success: true, message: "No tokens found" };
     }
@@ -59,27 +70,31 @@ export async function sendNotification(title: string, body: string) {
       },
     };
 
-    const messaging = getMessaging(getAdminApp());
-    // sendToDevice is deprecated, but simpler for this use case than sendEachForMulticast
-    // when we don't need to handle individual results.
+    const messaging = getMessaging(adminApp);
     const response = await messaging.sendToDevice(tokens, message);
     
     console.log('Successfully sent message:', response);
-    // Optional: Clean up invalid tokens based on response
+    
     const tokensToRemove: Promise<any>[] = [];
     response.results.forEach((result, index) => {
       const error = result.error;
       if (error) {
         console.error('Failure sending notification to', tokens[index], error);
-        // Common error indicating an invalid or unregistered token.
         if (
           error.code === 'messaging/invalid-registration-token' ||
           error.code === 'messaging/registration-token-not-registered'
         ) {
-           // Here you might want to implement logic to remove the invalid token from the DB
+           const tokenKeyToRemove = tokenKeys[index];
+           console.log(`Queueing invalid token for removal: ${tokenKeyToRemove}`);
+           tokensToRemove.push(set(ref(db, `deviceTokens/${tokenKeyToRemove}`), null));
         }
       }
     });
+
+    await Promise.all(tokensToRemove);
+    if(tokensToRemove.length > 0) {
+        console.log("Finished removing invalid tokens.");
+    }
 
     return { success: true };
 
