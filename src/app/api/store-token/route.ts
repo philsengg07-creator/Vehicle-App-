@@ -21,7 +21,6 @@ export async function POST(req: Request) {
 
   } catch (err: any) {
     console.error("Store token error via API Route:", err);
-    // In case of an error, return a 500 status code and the error message
     return NextResponse.json({ error: "Internal Server Error: " + err.message }, { status: 500 });
   }
 }
