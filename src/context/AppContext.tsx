@@ -20,17 +20,6 @@ async function sendNotification(title: string, body: string) {
     }
 }
 
-async function resetDailyData() {
-    const response = await fetch('/api/reset-data', {
-        method: 'POST'
-    });
-
-    if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.error || 'Failed to reset data');
-    }
-}
-
 export interface AppContextType {
   role: UserRole | null;
   switchRole: (role: UserRole) => void;
@@ -59,29 +48,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
-    const checkAndResetData = async () => {
-      const lastResetDate = localStorage.getItem('lastResetDate');
-      const today = new Date().toISOString().split('T')[0];
-
-      if (lastResetDate !== today) {
-        try {
-          console.log('Performing daily data reset...');
-          await resetDailyData();
-          localStorage.setItem('lastResetDate', today);
-          console.log('Daily data reset successful.');
-        } catch (error) {
-          console.error("Failed to perform daily reset:", error);
-          toast({
-            variant: "destructive",
-            title: "Data Reset Failed",
-            description: "Could not reset daily application data. Please try again later.",
-          });
-        }
-      }
-    };
-
-    checkAndResetData();
-
     const taxisRef = ref(db, 'taxis');
     const unsubscribeTaxis = onValue(taxisRef, (snapshot) => {
       const data = snapshot.val();
