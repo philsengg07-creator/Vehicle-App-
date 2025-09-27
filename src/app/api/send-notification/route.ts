@@ -10,20 +10,19 @@ export async function POST(req: Request) {
 
     const adminApp = getAdminApp();
     const db = getDatabase(adminApp);
-    const tokensRef = ref(db, "deviceTokens");
-    const snapshot = await get(tokensRef);
+    const tokenRef = ref(db, "adminDeviceToken");
+    const snapshot = await get(tokenRef);
 
     if (!snapshot.exists()) {
-      console.log('No admin device tokens found. Cannot send notification.');
-      return NextResponse.json({ success: true, message: "No tokens found" });
+      console.log('No admin device token found. Cannot send notification.');
+      return NextResponse.json({ success: true, message: "No token found" });
     }
 
-    const tokensData = snapshot.val();
-    const tokens = Object.values(tokensData) as string[];
+    const token = snapshot.val();
 
-    if (tokens.length === 0) {
-      console.log('No admin device tokens found. Cannot send notification.');
-      return NextResponse.json({ success: true, message: "No tokens found" });
+    if (!token) {
+      console.log('Admin device token is empty. Cannot send notification.');
+      return NextResponse.json({ success: true, message: "No token found" });
     }
 
     const message = {
@@ -31,10 +30,11 @@ export async function POST(req: Request) {
         title,
         body,
       },
+      token: token,
     };
 
     const messaging = getMessaging(adminApp);
-    const response = await messaging.sendToDevice(tokens, message);
+    const response = await messaging.send(message);
     console.log('Successfully sent message via API Route:', response);
 
     return NextResponse.json({ success: true });

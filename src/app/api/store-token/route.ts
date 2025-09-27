@@ -1,7 +1,7 @@
 
 import { NextResponse } from "next/server";
 import { getAdminApp } from "@/lib/firebaseAdmin";
-import { getDatabase, ref, get, push, set } from "firebase-admin/database";
+import { getDatabase, ref, set } from "firebase-admin/database";
 
 export async function POST(req: Request) {
   try {
@@ -12,22 +12,11 @@ export async function POST(req: Request) {
 
     const adminApp = getAdminApp();
     const db = getDatabase(adminApp);
-    const tokensRef = ref(db, "deviceTokens");
+    const tokenRef = ref(db, "adminDeviceToken");
     
-    const snapshot = await get(tokensRef);
-    const currentTokens = snapshot.val() || {};
+    await set(tokenRef, token);
     
-    const tokenExists = Object.values(currentTokens).includes(token);
-
-    if (tokenExists) {
-      console.log("Token already exists in the database.");
-      return NextResponse.json({ success: true, message: "Token already exists." });
-    }
-    
-    const newTokensRef = push(tokensRef);
-    await set(newTokensRef, token);
-    
-    console.log(`Stored new admin device token via API Route: ${token}`);
+    console.log(`Stored latest admin device token via API Route: ${token}`);
     return NextResponse.json({ success: true, message: "Token stored successfully." });
 
   } catch (err: any) {
