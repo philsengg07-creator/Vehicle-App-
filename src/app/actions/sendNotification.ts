@@ -42,21 +42,6 @@ function getFirebaseAdmin(): App {
     }
 }
 
-export async function storeAdminDeviceToken(token: string) {
-  try {
-    const adminApp = getFirebaseAdmin();
-    const db = getDatabase(adminApp);
-    const tokenRef = ref(db, "adminDeviceToken");
-    await set(tokenRef, token);
-    console.log(`Stored latest admin device token.`);
-    return { success: true };
-  } catch (err: any) {
-    console.error("Store token error:", err.message);
-    return { success: false, error: err.message };
-  }
-}
-
-
 export async function sendNotification(title: string, body: string) {
   try {
     const app = getFirebaseAdmin();
@@ -99,7 +84,8 @@ export async function sendNotification(title: string, body: string) {
     ) {
        console.log("Invalid or expired token detected. Removing from database.");
        try {
-         const db = getDatabase(getFirebaseAdmin());
+         const app = getFirebaseAdmin();
+         const db = getDatabase(app);
          const tokenRef = ref(db, "adminDeviceToken");
          await set(tokenRef, null);
        } catch (dbError) {

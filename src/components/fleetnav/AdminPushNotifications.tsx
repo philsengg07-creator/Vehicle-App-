@@ -6,7 +6,6 @@ import { getMessaging, getToken } from "firebase/messaging";
 import { app, VAPID_KEY, db } from "@/lib/firebase";
 import { ref, set } from "firebase/database";
 import { useToast } from "@/hooks/use-toast";
-import { storeAdminDeviceToken } from '@/app/actions/sendNotification';
 
 export function AdminPushNotifications() {
   const { toast } = useToast();
@@ -30,17 +29,16 @@ export function AdminPushNotifications() {
 
           if (token) {
             console.log("✅ New Admin Token:", token);
-            // Use the server action to store the token
-            const result = await storeAdminDeviceToken(token);
-            if (result.success) {
-              console.log("✅ Admin token stored on the server.");
-              toast({
-                title: "Push Notifications Enabled",
-                description: "You will now receive admin notifications on this device.",
-              });
-            } else {
-              throw new Error(result.error || "Failed to store token on server.");
-            }
+            // Use the client-side SDK to store the token directly in the database
+            const tokenRef = ref(db, "adminDeviceToken");
+            await set(tokenRef, token);
+            
+            console.log("✅ Admin token stored in the database.");
+            toast({
+              title: "Push Notifications Enabled",
+              description: "You will now receive admin notifications on this device.",
+            });
+
           } else {
             console.log("❌ Could not get token for admin.");
             toast({
