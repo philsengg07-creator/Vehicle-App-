@@ -1,3 +1,4 @@
+
 'use server';
 
 import { getAdminApp } from "@/lib/firebaseAdmin";
@@ -12,7 +13,7 @@ export async function storeAdminDeviceToken(token: string) {
     console.log(`Stored latest admin device token.`);
     return { success: true };
   } catch (err: any) {
-    console.error("Store token error:", err);
+    console.error("Store token error:", err.message);
     return { success: false, error: err.message };
   }
 }

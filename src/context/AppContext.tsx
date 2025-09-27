@@ -6,19 +6,7 @@ import type { UserRole, Taxi, Booking, AppNotification } from '@/types';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/lib/firebase';
 import { ref, onValue, set, remove, push, get, update } from 'firebase/database';
-
-async function sendNotification(title: string, body: string) {
-    const response = await fetch('/api/send-notification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, body }),
-    });
-
-    if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.error || 'Failed to send notification');
-    }
-}
+import { sendNotification as sendPushNotification } from '@/app/actions/notificationActions';
 
 export interface AppContextType {
   role: UserRole | null;
@@ -107,7 +95,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     if (shouldPush) {
       try {
-        await sendNotification('Taxi Alert', message);
+        await sendPushNotification('Taxi Alert', message);
       } catch (error) {
         console.error("Failed to send push notification:", error);
         toast({
