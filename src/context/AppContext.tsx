@@ -83,30 +83,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCurrentEmployeeId(null);
   }, []);
 
-  const addNotification = async (message: string, shouldPush: boolean = false) => {
-    const notificationsRef = ref(db, 'notifications');
-    const newNotificationRef = push(notificationsRef);
-    const newNotification = {
-      message,
-      date: new Date().toISOString(),
-      read: false,
-    };
-    await set(newNotificationRef, newNotification);
-
-    if (shouldPush) {
-      try {
-        await sendPushNotification('Taxi Alert', message);
-      } catch (error) {
-        console.error("Failed to send push notification:", error);
-        toast({
-          variant: "destructive",
-          title: "Notification Error",
-          description: "Could not send push notification. Please check server logs.",
-        });
-      }
-    }
-  };
-  
   const addTaxi = (taxiData: Omit<Taxi, 'id' | 'bookedSeats' | 'bookings'>) => {
     const taxisRef = ref(db, 'taxis');
     const newTaxiRef = push(taxisRef);
@@ -163,6 +139,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     
     const taxi = { id: taxiId, ...taxiSnapshot.val() };
+    
+    const addNotification = async (message: string, shouldPush: boolean = false) => {
+        const notificationsRef = ref(db, 'notifications');
+        const newNotificationRef = push(notificationsRef);
+        const newNotification = {
+          message,
+          date: new Date().toISOString(),
+          read: false,
+        };
+        await set(newNotificationRef, newNotification);
+    
+        if (shouldPush) {
+          try {
+            await sendPushNotification('Taxi Alert', message);
+          } catch (error) {
+            console.error("Failed to send push notification:", error);
+          }
+        }
+    };
 
     if (taxi.bookedSeats >= taxi.capacity) {
         const remainingEmployeesRef = ref(db, 'remainingEmployees');

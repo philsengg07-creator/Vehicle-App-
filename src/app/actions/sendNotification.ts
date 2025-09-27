@@ -2,7 +2,7 @@
 'use server';
 
 import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
-import { getDatabase, ref, get } from "firebase-admin/database";
+import { getDatabase, ref, get, set } from "firebase-admin/database";
 import { getMessaging } from "firebase-admin/messaging";
 import * as fs from 'fs';
 import * as path from 'path';
