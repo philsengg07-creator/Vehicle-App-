@@ -68,7 +68,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       unsubscribeEmployees();
       unsubscribeNotifications();
     };
-  }, [toast]);
+  }, []);
   
 
   const switchRole = useCallback((newRole: UserRole) => setRole(newRole), []);

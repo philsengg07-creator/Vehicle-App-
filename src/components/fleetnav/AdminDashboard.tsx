@@ -10,10 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Taxi } from "@/types";
-import { PushNotifications } from "./PushNotifications";
+import { AdminPushNotifications } from "./AdminPushNotifications";
 
 export function AdminDashboard() {
-  const { taxis, remainingEmployees, addTaxi, editTaxi } = useApp();
+  const { taxis, remainingEmployees, addTaxi, editTaxi, role } = useApp();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTaxi, setEditingTaxi] = useState<Taxi | undefined>(undefined);
 
@@ -38,7 +38,7 @@ export function AdminDashboard() {
 
   return (
     <div className="py-8">
-      <PushNotifications />
+      <AdminPushNotifications key={role} />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           <div className="flex justify-between items-center mb-6">

@@ -3,9 +3,8 @@
 
 import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getMessaging, getToken, onMessage } from "firebase/messaging";
-import { app, VAPID_KEY } from "@/lib/firebase";
-import { storeAdminDeviceToken } from '@/app/actions/notificationActions';
+import { getMessaging, onMessage } from "firebase/messaging";
+import { app } from "@/lib/firebase";
 
 export function PushNotifications() {
   const { toast } = useToast();
@@ -17,7 +16,7 @@ export function PushNotifications() {
 
     const messaging = getMessaging(app);
 
-    onMessage(messaging, (payload) => {
+    const unsubscribe = onMessage(messaging, (payload) => {
       console.log("📩 Foreground message received:", payload);
       toast({
         title: payload.notification?.title,
@@ -25,35 +24,7 @@ export function PushNotifications() {
       });
     });
 
-    const requestPermissionAndGetToken = async () => {
-      try {
-        const permission = await Notification.requestPermission();
-        console.log("🔔 Permission:", permission);
-
-        if (permission === "granted") {
-          const token = await getToken(messaging, {
-            vapidKey: VAPID_KEY,
-          });
-
-          if (token) {
-            console.log("✅ Token:", token);
-            const result = await storeAdminDeviceToken(token);
-            if(result.success) {
-              console.log("✅ Token stored on the server via Server Action.");
-            } else {
-              throw new Error(result.error || 'Failed to store token on server');
-            }
-          } else {
-            console.log("❌ Could not get token.");
-          }
-        }
-      } catch (error) {
-        console.error("An error occurred while getting token. ", error);
-      }
-    };
-    
-    requestPermissionAndGetToken();
-
+    return () => unsubscribe();
   }, [toast]);
 
   return null;
