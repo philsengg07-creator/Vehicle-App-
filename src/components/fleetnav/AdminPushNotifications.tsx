@@ -4,7 +4,7 @@
 import { useEffect } from 'react';
 import { getMessaging, getToken } from "firebase/messaging";
 import { app, VAPID_KEY } from "@/lib/firebase";
-import { storeAdminDeviceToken } from '@/app/actions/notificationActions';
+import { storeAdminDeviceToken } from '@/app/actions/sendNotification';
 
 export function AdminPushNotifications() {
   useEffect(() => {

@@ -4,7 +4,6 @@ import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
 import { getDatabase, ref, get, set } from "firebase-admin/database";
 import { getMessaging } from "firebase-admin/messaging";
 
-
 // Function to safely initialize and get the Firebase Admin app
 function getFirebaseAdmin(): App {
     const apps = getApps();
@@ -40,6 +39,20 @@ function getFirebaseAdmin(): App {
         console.error("Could not initialize Firebase Admin SDK in sendNotification.", e.message);
         throw e;
     }
+}
+
+export async function storeAdminDeviceToken(token: string) {
+  try {
+    const adminApp = getFirebaseAdmin();
+    const db = getDatabase(adminApp);
+    const tokenRef = ref(db, "adminDeviceToken");
+    await set(tokenRef, token);
+    console.log(`Stored latest admin device token.`);
+    return { success: true };
+  } catch (err: any) {
+    console.error("Store token error:", err.message);
+    return { success: false, error: err.message };
+  }
 }
 
 
