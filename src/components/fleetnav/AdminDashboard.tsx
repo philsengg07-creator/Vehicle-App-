@@ -2,20 +2,73 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, Shield, Bell, DatabaseZap, Loader2 } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import { TaxiCard } from "./TaxiCard";
 import { TaxiForm, type TaxiFormValues } from "./TaxiForm";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Taxi } from "@/types";
-import { AdminPushNotifications } from "./AdminPushNotifications";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
+
+
+async function resetData() {
+  try {
+    const response = await fetch('/api/reset-data', {
+      method: 'POST',
+    });
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Failed to reset data');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error resetting data:', error);
+    throw error;
+  }
+}
+
+async function sendTestNotification() {
+  try {
+    const response = await fetch('/api/send-notification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Test Notification',
+        body: 'If you see this, push is working 🎉',
+      }),
+    });
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Failed to send notification');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error sending test notification:', error);
+    throw error;
+  }
+}
+
 
 export function AdminDashboard() {
-  const { taxis, remainingEmployees, addTaxi, editTaxi, role } = useApp();
+  const { taxis, remainingEmployees, addTaxi, editTaxi } = useApp();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTaxi, setEditingTaxi] = useState<Taxi | undefined>(undefined);
+  const { toast } = useToast();
+  const [isResetting, setIsResetting] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
 
   const handleOpenForm = (taxi?: Taxi) => {
     setEditingTaxi(taxi);
@@ -36,9 +89,92 @@ export function AdminDashboard() {
     handleCloseForm();
   };
 
+  const handleReset = async () => {
+    setIsResetting(true);
+    try {
+      await resetData();
+      toast({
+        title: 'Success',
+        description: 'Database has been reset to its initial state.',
+      });
+      // Optionally, you might want to refresh the page or state
+      window.location.reload();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to reset database.',
+      });
+    } finally {
+      setIsResetting(false);
+      setIsAlertOpen(false);
+    }
+  };
+
+  const handleSendTest = async () => {
+    setIsSending(true);
+    try {
+      const result = await sendTestNotification();
+       if (result.message === 'No tokens found') {
+         toast({
+           variant: 'destructive',
+           title: 'Cannot Send Notification',
+           description: 'No admin device token found. Please log in again.',
+         });
+       } else {
+          toast({
+            title: 'Notification Sent',
+            description: 'Test notification sent to admin device(s).',
+          });
+       }
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description:
+          error.message || 'Failed to send test notification.',
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   return (
     <div className="py-8">
-      <AdminPushNotifications key={role} />
+       <Card className="my-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield /> Admin Controls
+          </CardTitle>
+          <CardDescription>
+            Use these controls to manage notifications and app data.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col sm:flex-row gap-4">
+          <Button onClick={handleSendTest} disabled={isSending} className='w-full sm:w-auto'>
+            {isSending ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <Bell/>
+            )}
+            Send Test Notification
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => setIsAlertOpen(true)}
+            disabled={isResetting}
+            className='w-full sm:w-auto'
+          >
+            {isResetting ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <DatabaseZap />
+            )}
+            Reset App Data
+          </Button>
+        </CardContent>
+      </Card>
+      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           <div className="flex justify-between items-center mb-6">
@@ -98,6 +234,24 @@ export function AdminDashboard() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will permanently delete all taxis, bookings, and
+              notifications from the database. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleReset}>
+              Yes, reset data
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
