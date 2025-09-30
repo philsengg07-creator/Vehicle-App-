@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
-import { getDatabase, ref, get } from "firebase-admin/database";
+import { getDatabase } from "firebase-admin/database";
 import { getMessaging } from "firebase-admin/messaging";
 
 let adminApp: App;
@@ -47,8 +47,8 @@ export async function POST(request: Request) {
   try {
     const app = getFirebaseAdmin();
     const db = getDatabase(app);
-    const tokenRef = ref(db, "adminDeviceToken");
-    const snapshot = await get(tokenRef);
+    const tokenRef = db.ref("adminDeviceToken");
+    const snapshot = await tokenRef.once("value");
 
     if (!snapshot.exists() || !snapshot.val()) {
       return NextResponse.json({ success: true, message: 'No tokens found' });
@@ -79,8 +79,7 @@ export async function POST(request: Request) {
        try {
          const app = getFirebaseAdmin();
          const db = getDatabase(app);
-         const tokenRef = ref(db, "adminDeviceToken");
-         await ref(db, `adminDeviceToken`).set(null);
+         await db.ref("adminDeviceToken").set(null);
        } catch (dbError) {
          console.error("Failed to remove token from database:", dbError);
        }
