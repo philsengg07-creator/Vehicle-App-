@@ -8,6 +8,22 @@ import { db } from '@/lib/firebase';
 import { ref, onValue, set, remove, push, get, update } from 'firebase/database';
 import { sendNotification as sendPushNotification } from '@/app/actions/sendNotification';
 
+async function resetData() {
+  try {
+    const response = await fetch('/api/reset-data', {
+      method: 'POST',
+    });
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Failed to reset data');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error resetting data:', error);
+    throw error;
+  }
+}
+
 export interface AppContextType {
   role: UserRole | null;
   switchRole: (role: UserRole) => void;
@@ -36,6 +52,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
+    const checkAndResetData = async () => {
+      const lastResetRef = ref(db, 'lastResetTimestamp');
+      const snapshot = await get(lastResetRef);
+      const lastResetTimestamp = snapshot.val();
+      const now = new Date().getTime();
+      
+      const oneDay = 24 * 60 * 60 * 1000;
+
+      if (!lastResetTimestamp || (now - new Date(lastResetTimestamp).getTime() > oneDay)) {
+        console.log("Resetting application data...");
+        try {
+          await resetData();
+          console.log("Data reset successfully.");
+        } catch (error) {
+          console.error("Failed to automatically reset data:", error);
+        }
+      } else {
+        console.log("Skipping automatic data reset.");
+      }
+    };
+
+    checkAndResetData();
+
     const taxisRef = ref(db, 'taxis');
     const unsubscribeTaxis = onValue(taxisRef, (snapshot) => {
       const data = snapshot.val();

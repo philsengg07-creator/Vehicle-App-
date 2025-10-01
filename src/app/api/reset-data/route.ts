@@ -51,7 +51,8 @@ const initialData = {
       "emp-3": "Judy"
     },
     notifications: {},
-    adminDeviceTokens: {}
+    adminDeviceTokens: {},
+    lastResetTimestamp: ""
   };
   
 
@@ -96,7 +97,13 @@ export async function POST() {
     const app = getFirebaseAdmin();
     const db = getDatabase(app);
     const dbRef = db.ref('/');
-    await dbRef.set(initialData);
+    
+    const dataToSet = {
+        ...initialData,
+        lastResetTimestamp: new Date().toISOString()
+    };
+
+    await dbRef.set(dataToSet);
     
     return NextResponse.json({ success: true, message: 'Database reset successfully' });
     

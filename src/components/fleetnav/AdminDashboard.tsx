@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Users, Shield, Bell, DatabaseZap, Loader2 } from "lucide-react";
+import { Plus, Users, Shield, Bell, Loader2 } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import { TaxiCard } from "./TaxiCard";
 import { TaxiForm, type TaxiFormValues } from "./TaxiForm";
@@ -10,47 +10,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Taxi } from "@/types";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { getMessaging, getToken } from "firebase/messaging";
 import { set, ref, get, push, update } from "firebase/database";
 import { app, db, VAPID_KEY } from "@/lib/firebase";
 import { sendNotification } from "@/app/actions/sendNotification";
 
-
-async function resetData() {
-  try {
-    const response = await fetch('/api/reset-data', {
-      method: 'POST',
-    });
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.error || 'Failed to reset data');
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('Error resetting data:', error);
-    throw error;
-  }
-}
-
 export function AdminDashboard() {
   const { taxis, remainingEmployees, addTaxi, editTaxi } = useApp();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTaxi, setEditingTaxi] = useState<Taxi | undefined>(undefined);
   const { toast } = useToast();
-  const [isResetting, setIsResetting] = useState(false);
   const [isEnabling, setIsEnabling] = useState(false);
-  const [isAlertOpen, setIsAlertOpen] = useState(false);
 
   const handleOpenForm = (taxi?: Taxi) => {
     setEditingTaxi(taxi);
@@ -69,28 +40,6 @@ export function AdminDashboard() {
       addTaxi(data);
     }
     handleCloseForm();
-  };
-
-  const handleReset = async () => {
-    setIsResetting(true);
-    try {
-      await resetData();
-      toast({
-        title: 'Success',
-        description: 'Database has been reset to its initial state.',
-      });
-      // Optionally, you might want to refresh the page or state
-      window.location.reload();
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.message || 'Failed to reset database.',
-      });
-    } finally {
-      setIsResetting(false);
-      setIsAlertOpen(false);
-    }
   };
 
   const handleEnableNotifications = async () => {
@@ -171,7 +120,7 @@ export function AdminDashboard() {
             <Shield /> Admin Controls
           </CardTitle>
           <CardDescription>
-            Use these controls to manage notifications and app data.
+            Use this control to manage notifications for your devices.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-4">
@@ -182,19 +131,6 @@ export function AdminDashboard() {
               <Bell/>
             )}
             Enable Notifications
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => setIsAlertOpen(true)}
-            disabled={isResetting}
-            className='w-full sm:w-auto'
-          >
-            {isResetting ? (
-              <Loader2 className="animate-spin" />
-            ) : (
-              <DatabaseZap />
-            )}
-            Reset App Data
           </Button>
         </CardContent>
       </Card>
@@ -259,23 +195,6 @@ export function AdminDashboard() {
         </Dialog>
       </div>
 
-      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action will permanently delete all taxis, bookings, and
-              notifications from the database. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleReset}>
-              Yes, reset data
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
