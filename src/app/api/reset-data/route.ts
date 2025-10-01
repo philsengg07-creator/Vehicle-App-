@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
-import { getDatabase, ref, set } from "firebase-admin/database";
+import { getDatabase } from "firebase-admin/database";
 
 const initialData = {
     taxis: {
@@ -95,8 +95,8 @@ export async function POST() {
   try {
     const app = getFirebaseAdmin();
     const db = getDatabase(app);
-    const dbRef = ref(db, '/');
-    await set(dbRef, initialData);
+    const dbRef = db.ref('/');
+    await dbRef.set(initialData);
     
     return NextResponse.json({ success: true, message: 'Database reset successfully' });
     

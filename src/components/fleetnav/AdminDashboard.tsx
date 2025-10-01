@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { getMessaging, getToken } from "firebase/messaging";
-import { set, ref, get, push } from "firebase/database";
+import { set, ref, get, push, update } from "firebase/database";
 import { app, db, VAPID_KEY } from "@/lib/firebase";
 import { sendNotification } from "@/app/actions/sendNotification";
 
@@ -122,9 +122,12 @@ export function AdminDashboard() {
           // Manage token list size
           const tokenKeys = Object.keys(tokens);
           if (tokenKeys.length >= 5) {
-            // Remove the oldest token
-            const oldestKey = tokenKeys[0];
-            delete tokens[oldestKey];
+            // Remove the oldest token by finding its key
+            const oldestTokenEntry = Object.entries(tokens)[0];
+            const oldestKey = oldestTokenEntry[0];
+            const updates: { [key: string]: null } = {};
+            updates[`/adminDeviceTokens/${oldestKey}`] = null;
+            await update(ref(db), updates);
           }
 
           // Add the new token using push to get a unique key
@@ -274,5 +277,3 @@ export function AdminDashboard() {
     </div>
   );
 }
-
-    
