@@ -57,7 +57,6 @@ const initialData = {
   },
   notifications: {},
   adminDeviceTokens: {},
-  lastResetTimestamp: ""
 };
 
 
@@ -104,12 +103,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
-    const checkAndResetData = async () => {
+    const initializeApp = async () => {
+      // 1. Check if we need to reset data
       const lastResetRef = ref(db, 'lastResetTimestamp');
       const snapshot = await get(lastResetRef);
       const lastResetTimestamp = snapshot.val();
       const now = new Date().getTime();
-      
       const oneDay = 24 * 60 * 60 * 1000;
 
       if (!lastResetTimestamp || (now - new Date(lastResetTimestamp).getTime() > oneDay)) {
@@ -123,11 +122,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } else {
         console.log("Skipping automatic data reset.");
       }
-    };
 
-    const initializeApp = async () => {
-      await checkAndResetData();
-
+      // 2. Attach Firebase listeners AFTER the check/reset is complete
       const taxisRef = ref(db, 'taxis');
       onValue(taxisRef, (snapshot) => {
         const data = snapshot.val();
