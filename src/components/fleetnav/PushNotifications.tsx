@@ -8,11 +8,15 @@ import { app } from "@/lib/firebase";
 export function PushNotifications() {
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !('Notification' in window) || !messaging) {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
         return;
     }
 
     const messaging = getMessaging(app);
+    
+    if (!messaging) {
+        return;
+    }
 
     const unsubscribe = onMessage(messaging, (payload) => {
       console.log("📩 Foreground message received:", payload);
