@@ -2,15 +2,13 @@
 "use client";
 
 import { useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
 import { getMessaging, onMessage } from "firebase/messaging";
 import { app } from "@/lib/firebase";
 
 export function PushNotifications() {
-  const { toast } = useToast();
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !('Notification' in window)) {
+    if (typeof window === 'undefined' || !('Notification' in window) || !messaging) {
         return;
     }
 
@@ -18,14 +16,16 @@ export function PushNotifications() {
 
     const unsubscribe = onMessage(messaging, (payload) => {
       console.log("📩 Foreground message received:", payload);
-      toast({
-        title: payload.notification?.title,
-        description: payload.notification?.body,
-      });
+      
+      const { title, body } = payload.notification || {};
+      if (title && body) {
+          // Manually display a browser notification
+          new Notification(title, { body });
+      }
     });
 
     return () => unsubscribe();
-  }, [toast]);
+  }, []);
 
   return null;
 }
