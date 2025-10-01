@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import type { Taxi } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { getMessaging, getToken } from "firebase/messaging";
-import { set, ref, get, push, update } from "firebase/database";
+import { set, ref, get, push, update, remove } from "firebase/database";
 import { app, db, VAPID_KEY } from "@/lib/firebase";
 import { sendNotification } from "@/app/actions/sendNotification";
 
@@ -53,12 +53,18 @@ export function AdminDashboard() {
         if (currentToken) {
           const tokensRef = ref(db, 'adminDeviceTokens');
           const snapshot = await get(tokensRef);
-          let tokens: { [key: string]: string } = snapshot.val() || {};
+          const tokens: { [key: string]: string } = snapshot.val() || {};
+          
+          let existingKey: string | undefined;
+          for (const key in tokens) {
+            if (tokens[key] === currentToken) {
+              existingKey = key;
+              break;
+            }
+          }
 
-          // Check if token already exists
-          const isTokenExists = Object.values(tokens).includes(currentToken);
-
-          if (isTokenExists) {
+          if (existingKey) {
+            // If token exists, just show a confirmation. No need to re-add.
              toast({
               title: "Notifications Already Enabled",
               description: "This device is already registered for notifications.",
@@ -67,33 +73,32 @@ export function AdminDashboard() {
             setIsEnabling(false);
             return;
           }
-          
-          const dbRef = ref(db);
-          const updates: { [key: string]: any } = {};
 
-          // Manage token list size
+          // If we reach here, the token is new.
+          const updates: { [key: string]: any } = {};
           const tokenKeys = Object.keys(tokens);
+
+          // Manage token list size - remove the oldest if we're at capacity
           if (tokenKeys.length >= 5) {
-            // Remove the oldest token by finding its key
-            const oldestKey = tokenKeys[0];
+            const oldestKey = tokenKeys[0]; // Assuming order is maintained, which it is for push keys
             updates[`/adminDeviceTokens/${oldestKey}`] = null;
           }
 
-          // Add the new token using push to get a unique key
-          const newTokensRef = push(ref(db, 'adminDeviceTokens'));
-          updates[newTokensRef.key!] = currentToken;
-
-          await update(dbRef, updates);
+          // Add the new token
+          const newTokenRef = push(ref(db, 'adminDeviceTokens'));
+          updates[newTokenRef.key!] = currentToken;
+          
+          await update(ref(db), updates);
           
           console.log('Admin device token saved:', currentToken);
           
-          // Automatically send a test notification
           await sendNotification("Notifications Enabled", "You will now receive alerts on this device.");
 
           toast({
             title: "Push Notifications Enabled",
             description: "A test notification has been sent to this device.",
           });
+
         } else {
           throw new Error("Could not get push token. Please check your browser settings.");
         }
