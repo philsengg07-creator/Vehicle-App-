@@ -8,18 +8,70 @@ import { db } from '@/lib/firebase';
 import { ref, onValue, set, remove, push, get, update } from 'firebase/database';
 import { sendNotification as sendPushNotification } from '@/app/actions/sendNotification';
 
+const initialData = {
+  taxis: {
+    "taxi-1": {
+      name: "Metro Cab",
+      capacity: 4,
+      bookedSeats: 2,
+      bookings: {
+          "booking-1": {
+              employeeId: "John Doe",
+              bookingTime: "2024-05-22T10:00:00Z"
+          },
+          "booking-2": {
+              employeeId: "Jane Smith",
+              bookingTime: "2024-05-22T10:05:00Z"
+          }
+      }
+    },
+    "taxi-2": {
+      name: "City Express",
+      capacity: 6,
+      bookedSeats: 6,
+      bookings: {
+          "booking-3": { employeeId: "Alice", bookingTime: "2024-05-22T11:00:00Z" },
+          "booking-4": { employeeId: "Bob", bookingTime: "2024-05-22T11:00:00Z" },
+          "booking-5": { employeeId: "Charlie", bookingTime: "2024-05-22T11:00:00Z" },
+          "booking-6": { employeeId: "Diana", bookingTime: "2024-05-22T11:00:00Z" },
+          "booking-7": { employeeId: "Eve", bookingTime: "2024-05-22T11:00:00Z" },
+          "booking-8": { employeeId: "Frank", bookingTime: "2024-05-22T11:00:00Z" }
+      }
+    },
+    "taxi-3": {
+      name: "Urban Ride",
+      capacity: 5,
+      bookedSeats: 1,
+       bookings: {
+          "booking-9": {
+              employeeId: "Grace",
+              bookingTime: "2024-05-22T12:00:00Z"
+          }
+      }
+    }
+  },
+  remainingEmployees: {
+    "emp-1": "Heidi",
+    "emp-2": "Ivan",
+    "emp-3": "Judy"
+  },
+  notifications: {},
+  adminDeviceTokens: {},
+  lastResetTimestamp: ""
+};
+
+
 async function resetData() {
   try {
-    const response = await fetch('/api/reset-data', {
-      method: 'POST',
-    });
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.error || 'Failed to reset data');
-    }
-    return await response.json();
+    const dbRef = ref(db);
+    const dataToSet = {
+        ...initialData,
+        lastResetTimestamp: new Date().toISOString()
+    };
+    await set(dbRef, dataToSet);
+    console.log('Database reset successfully via client-side.');
   } catch (error) {
-    console.error('Error resetting data:', error);
+    console.error('Error resetting data from client:', error);
     throw error;
   }
 }
@@ -73,40 +125,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    checkAndResetData();
+    const initializeApp = async () => {
+      await checkAndResetData();
 
-    const taxisRef = ref(db, 'taxis');
-    const unsubscribeTaxis = onValue(taxisRef, (snapshot) => {
-      const data = snapshot.val();
-      const taxisArray: Taxi[] = data ? Object.keys(data).map(key => ({
-        id: key,
-        ...data[key],
-        bookings: data[key].bookings ? Object.values(data[key].bookings) : [],
-      })) : [];
-      setTaxis(taxisArray);
-    });
-
-    const remainingEmployeesRef = ref(db, 'remainingEmployees');
-    const unsubscribeEmployees = onValue(remainingEmployeesRef, (snapshot) => {
+      const taxisRef = ref(db, 'taxis');
+      onValue(taxisRef, (snapshot) => {
         const data = snapshot.val();
-        setRemainingEmployees(data ? Object.values(data) as string[] : []);
-    });
-
-    const notificationsRef = ref(db, 'notifications');
-    const unsubscribeNotifications = onValue(notificationsRef, (snapshot) => {
-        const data = snapshot.val();
-        const notificationsArray: AppNotification[] = data ? Object.keys(data).map(key => ({
-            id: key,
-            ...data[key]
-        })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
-        setNotifications(notificationsArray);
-    });
-
-    return () => {
-      unsubscribeTaxis();
-      unsubscribeEmployees();
-      unsubscribeNotifications();
+        const taxisArray: Taxi[] = data ? Object.keys(data).map(key => ({
+          id: key,
+          ...data[key],
+          bookings: data[key].bookings ? Object.values(data[key].bookings) : [],
+        })) : [];
+        setTaxis(taxisArray);
+      });
+  
+      const remainingEmployeesRef = ref(db, 'remainingEmployees');
+      onValue(remainingEmployeesRef, (snapshot) => {
+          const data = snapshot.val();
+          setRemainingEmployees(data ? Object.values(data) as string[] : []);
+      });
+  
+      const notificationsRef = ref(db, 'notifications');
+      onValue(notificationsRef, (snapshot) => {
+          const data = snapshot.val();
+          const notificationsArray: AppNotification[] = data ? Object.keys(data).map(key => ({
+              id: key,
+              ...data[key]
+          })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
+          setNotifications(notificationsArray);
+      });
     };
+
+    initializeApp();
+
   }, []);
   
 
@@ -272,3 +323,5 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
+
+    
