@@ -7,9 +7,19 @@ import { AdminDashboard } from '@/components/fleetnav/AdminDashboard';
 import { EmployeeDashboard } from '@/components/fleetnav/EmployeeDashboard';
 import { RoleSelection } from '@/components/fleetnav/RoleSelection';
 import { PushNotifications } from '@/components/fleetnav/PushNotifications';
+import { Loader2 } from 'lucide-react';
 
 function FleetNavApp() {
-  const { role, currentEmployeeId } = useApp();
+  const { role, currentEmployeeId, isLoading } = useApp();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Initializing App...</p>
+      </div>
+    );
+  }
 
   if (!role || (role === 'employee' && !currentEmployeeId)) {
     return <RoleSelection />;

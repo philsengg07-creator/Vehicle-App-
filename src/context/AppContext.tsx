@@ -90,6 +90,7 @@ export interface AppContextType {
   markNotificationsAsRead: () => void;
   employeeBookings: Booking[];
   currentEmployeeId: string | null;
+  isLoading: boolean;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -100,32 +101,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [taxis, setTaxis] = useState<Taxi[]>([]);
   const [remainingEmployees, setRemainingEmployees] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     const initializeApp = async () => {
-      // 1. Check if we need to reset data
-      const lastResetRef = ref(db, 'lastResetTimestamp');
-      const snapshot = await get(lastResetRef);
-      const lastResetTimestamp = snapshot.val();
-      const now = new Date().getTime();
-      const oneDay = 24 * 60 * 60 * 1000;
+      setIsLoading(true);
+      try {
+        // 1. Check if we need to reset data
+        const lastResetRef = ref(db, 'lastResetTimestamp');
+        const snapshot = await get(lastResetRef);
+        const lastResetTimestamp = snapshot.val();
+        const now = new Date().getTime();
+        const oneDay = 24 * 60 * 60 * 1000;
 
-      if (!lastResetTimestamp || (now - new Date(lastResetTimestamp).getTime() > oneDay)) {
-        console.log("Resetting application data...");
-        try {
+        if (!lastResetTimestamp || (now - new Date(lastResetTimestamp).getTime() > oneDay)) {
+          console.log("Resetting application data...");
           await resetData();
-          console.log("Data reset successfully.");
-        } catch (error) {
-          console.error("Failed to automatically reset data:", error);
+        } else {
+          console.log("Skipping automatic data reset.");
         }
-      } else {
-        console.log("Skipping automatic data reset.");
+      } catch (error) {
+        console.error("Failed during app initialization check:", error);
       }
 
       // 2. Attach Firebase listeners AFTER the check/reset is complete
       const taxisRef = ref(db, 'taxis');
-      onValue(taxisRef, (snapshot) => {
+      const taxisUnsubscribe = onValue(taxisRef, (snapshot) => {
         const data = snapshot.val();
         const taxisArray: Taxi[] = data ? Object.keys(data).map(key => {
           const taxiData = data[key];
@@ -142,13 +144,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
   
       const remainingEmployeesRef = ref(db, 'remainingEmployees');
-      onValue(remainingEmployeesRef, (snapshot) => {
+      const employeesUnsubscribe = onValue(remainingEmployeesRef, (snapshot) => {
           const data = snapshot.val();
           setRemainingEmployees(data ? Object.values(data) as string[] : []);
       });
   
       const notificationsRef = ref(db, 'notifications');
-      onValue(notificationsRef, (snapshot) => {
+      const notificationsUnsubscribe = onValue(notificationsRef, (snapshot) => {
           const data = snapshot.val();
           const notificationsArray: AppNotification[] = data ? Object.keys(data).map(key => ({
               id: key,
@@ -156,6 +158,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
           })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
           setNotifications(notificationsArray);
       });
+
+      // 3. Finish loading
+      setIsLoading(false);
+
+      // Return cleanup function to unsubscribe from listeners on component unmount
+      return () => {
+        taxisUnsubscribe();
+        employeesUnsubscribe();
+        notificationsUnsubscribe();
+      };
     };
 
     initializeApp();
@@ -321,6 +333,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     markNotificationsAsRead,
     employeeBookings,
     currentEmployeeId,
+    isLoading,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
