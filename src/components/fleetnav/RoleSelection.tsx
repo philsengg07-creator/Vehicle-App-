@@ -10,9 +10,6 @@ import { Shield, User } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { getMessaging, getToken } from "firebase/messaging";
-import { set, ref } from "firebase/database";
-import { app, db, VAPID_KEY } from "@/lib/firebase";
 
 export function RoleSelection() {
   const { setEmployee, switchRole } = useApp();
@@ -38,47 +35,7 @@ export function RoleSelection() {
         });
         return;
     }
-
-    try {
-        const messaging = getMessaging(app);
-        const permission = await Notification.requestPermission();
-        
-        if (permission === 'granted') {
-            const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY });
-            if (currentToken) {
-                const tokenRef = ref(db, 'adminDeviceToken');
-                await set(tokenRef, currentToken);
-                console.log('Admin device token saved:', currentToken);
-                toast({
-                    title: "Push Notifications Enabled",
-                    description: "You will now receive notifications on this device.",
-                });
-            } else {
-                console.log('No registration token available. Request permission to generate one.');
-                toast({
-                    variant: "destructive",
-                    title: "Token Error",
-                    description: "Could not get push token. Please enable notifications for this site.",
-                });
-            }
-        } else {
-            console.log('Unable to get permission to notify.');
-            toast({
-                variant: "destructive",
-                title: "Permission Denied",
-                description: "You have not granted permission for notifications.",
-            });
-        }
-    } catch (error) {
-        console.error('An error occurred while getting token. ', error);
-        toast({
-            variant: "destructive",
-            title: "Token Generation Failed",
-            description: "An error occurred while setting up push notifications.",
-        });
-    } finally {
-        switchRole("admin");
-    }
+    switchRole("admin");
   };
 
   return (

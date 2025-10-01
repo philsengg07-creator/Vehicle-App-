@@ -21,6 +21,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { getMessaging, getToken } from "firebase/messaging";
+import { set, ref } from "firebase/database";
+import { app, db, VAPID_KEY } from "@/lib/firebase";
+import { sendNotification } from "@/app/actions/sendNotification";
 
 
 async function resetData() {
@@ -39,35 +43,13 @@ async function resetData() {
   }
 }
 
-async function sendTestNotification() {
-  try {
-    const response = await fetch('/api/send-notification', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: 'Test Notification',
-        body: 'If you see this, push is working 🎉',
-      }),
-    });
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.error || 'Failed to send notification');
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('Error sending test notification:', error);
-    throw error;
-  }
-}
-
-
 export function AdminDashboard() {
   const { taxis, remainingEmployees, addTaxi, editTaxi } = useApp();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTaxi, setEditingTaxi] = useState<Taxi | undefined>(undefined);
   const { toast } = useToast();
   const [isResetting, setIsResetting] = useState(false);
-  const [isSending, setIsSending] = useState(false);
+  const [isEnabling, setIsEnabling] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
 
   const handleOpenForm = (taxi?: Taxi) => {
@@ -111,31 +93,41 @@ export function AdminDashboard() {
     }
   };
 
-  const handleSendTest = async () => {
-    setIsSending(true);
+  const handleEnableNotifications = async () => {
+    setIsEnabling(true);
     try {
-      const result = await sendTestNotification();
-       if (result.message === 'No tokens found') {
-         toast({
-           variant: 'destructive',
-           title: 'Cannot Send Notification',
-           description: 'No admin device token found. Please log in again.',
-         });
-       } else {
+      const messaging = getMessaging(app);
+      const permission = await Notification.requestPermission();
+
+      if (permission === 'granted') {
+        const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY });
+        if (currentToken) {
+          const tokenRef = ref(db, 'adminDeviceToken');
+          await set(tokenRef, currentToken);
+          console.log('Admin device token saved:', currentToken);
+          
+          // Automatically send a test notification
+          await sendNotification("Notifications Enabled", "You will now receive alerts on this device.");
+
           toast({
-            title: 'Notification Sent',
-            description: 'Test notification sent to admin device(s).',
+            title: "Push Notifications Enabled",
+            description: "A test notification has been sent to this device.",
           });
-       }
+        } else {
+          throw new Error("Could not get push token. Please check your browser settings.");
+        }
+      } else {
+        throw new Error("Permission denied. You have not granted permission for notifications.");
+      }
     } catch (error: any) {
+      console.error('An error occurred while enabling notifications.', error);
       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description:
-          error.message || 'Failed to send test notification.',
+        variant: "destructive",
+        title: "Notification Setup Failed",
+        description: error.message || "An unexpected error occurred.",
       });
     } finally {
-      setIsSending(false);
+      setIsEnabling(false);
     }
   };
 
@@ -151,13 +143,13 @@ export function AdminDashboard() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-4">
-          <Button onClick={handleSendTest} disabled={isSending} className='w-full sm:w-auto'>
-            {isSending ? (
+          <Button onClick={handleEnableNotifications} disabled={isEnabling} className='w-full sm:w-auto'>
+            {isEnabling ? (
               <Loader2 className="animate-spin" />
             ) : (
               <Bell/>
             )}
-            Send Test Notification
+            Enable Notifications
           </Button>
           <Button
             variant="destructive"
