@@ -2,7 +2,7 @@
 'use server';
 
 import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
-import { getDatabase, ref, get, set, update } from "firebase-admin/database";
+import { getDatabase, ref, get, update } from "firebase-admin/database";
 import { getMessaging } from "firebase-admin/messaging";
 
 // Function to safely initialize and get the Firebase Admin app
