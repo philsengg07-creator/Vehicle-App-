@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
-import { getDatabase } from "firebase-admin/database";
+import { getDatabase, ref, set } from "firebase-admin/database";
 
 const initialData = {
     taxis: {
@@ -55,11 +55,10 @@ const initialData = {
   };
   
 
-let adminApp: App;
-
 function getFirebaseAdmin(): App {
-    if (getApps().some(app => app.name === 'adminResetApp')) {
-        return getApps().find(app => app.name === 'adminResetApp')!;
+    const apps = getApps();
+    if (apps.length > 0 && apps.find(app => app.name === 'adminResetApp')) {
+        return apps.find(app => app.name === 'adminResetApp')!;
     }
 
     try {
@@ -80,11 +79,10 @@ function getFirebaseAdmin(): App {
             }
         }
         
-        adminApp = initializeApp({
+        return initializeApp({
             credential: cert(serviceAccount),
             databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || "https://studio-6451719734-ee0cd-default-rtdb.asia-southeast1.firebasedatabase.app"
         }, 'adminResetApp');
-        return adminApp;
 
     } catch (e: any) {
         console.error("Could not initialize Firebase Admin SDK in reset-data API.", e.message);
@@ -97,8 +95,8 @@ export async function POST() {
   try {
     const app = getFirebaseAdmin();
     const db = getDatabase(app);
-    const dbRef = db.ref('/');
-    await dbRef.set(initialData);
+    const dbRef = ref(db, '/');
+    await set(dbRef, initialData);
     
     return NextResponse.json({ success: true, message: 'Database reset successfully' });
     
