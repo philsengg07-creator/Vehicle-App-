@@ -118,21 +118,23 @@ export function AdminDashboard() {
             setIsEnabling(false);
             return;
           }
+          
+          const dbRef = ref(db);
+          const updates: { [key: string]: any } = {};
 
           // Manage token list size
           const tokenKeys = Object.keys(tokens);
           if (tokenKeys.length >= 5) {
             // Remove the oldest token by finding its key
-            const oldestTokenEntry = Object.entries(tokens)[0];
-            const oldestKey = oldestTokenEntry[0];
-            const updates: { [key: string]: null } = {};
+            const oldestKey = tokenKeys[0];
             updates[`/adminDeviceTokens/${oldestKey}`] = null;
-            await update(ref(db), updates);
           }
 
           // Add the new token using push to get a unique key
-          const newTokensRef = push(tokensRef);
-          await set(newTokensRef, currentToken);
+          const newTokensRef = push(ref(db, 'adminDeviceTokens'));
+          updates[newTokensRef.key!] = currentToken;
+
+          await update(dbRef, updates);
           
           console.log('Admin device token saved:', currentToken);
           

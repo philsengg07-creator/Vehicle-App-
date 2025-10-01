@@ -2,7 +2,7 @@
 'use server';
 
 import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
-import { getDatabase, ref, get, set, remove } from "firebase-admin/database";
+import { getDatabase, ref, get, set, update } from "firebase-admin/database";
 import { getMessaging } from "firebase-admin/messaging";
 
 // Function to safely initialize and get the Firebase Admin app
@@ -93,7 +93,8 @@ export async function sendNotification(title: string, body: string) {
 
     if (Object.keys(tokensToDelete).length > 0) {
         console.log("Removing invalid tokens:", Object.keys(tokensToDelete));
-        await update(ref(db), tokensToDelete);
+        const dbRef = ref(db);
+        await update(dbRef, tokensToDelete);
     }
     
     return { success: true, message: "Notifications sent" };
@@ -103,5 +104,3 @@ export async function sendNotification(title: string, body: string) {
     return { success: false, error: err.message };
   }
 }
-
-    
