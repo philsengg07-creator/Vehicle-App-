@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { getMessaging, getToken } from "firebase/messaging";
-import { set, ref } from "firebase/database";
+import { set, ref, get, push } from "firebase/database";
 import { app, db, VAPID_KEY } from "@/lib/firebase";
 import { sendNotification } from "@/app/actions/sendNotification";
 
@@ -102,8 +102,35 @@ export function AdminDashboard() {
       if (permission === 'granted') {
         const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY });
         if (currentToken) {
-          const tokenRef = ref(db, 'adminDeviceToken');
-          await set(tokenRef, currentToken);
+          const tokensRef = ref(db, 'adminDeviceTokens');
+          const snapshot = await get(tokensRef);
+          let tokens: { [key: string]: string } = snapshot.val() || {};
+
+          // Check if token already exists
+          const isTokenExists = Object.values(tokens).includes(currentToken);
+
+          if (isTokenExists) {
+             toast({
+              title: "Notifications Already Enabled",
+              description: "This device is already registered for notifications.",
+            });
+            await sendNotification("Notifications Already Enabled", "You are already receiving alerts on this device.");
+            setIsEnabling(false);
+            return;
+          }
+
+          // Manage token list size
+          const tokenKeys = Object.keys(tokens);
+          if (tokenKeys.length >= 5) {
+            // Remove the oldest token
+            const oldestKey = tokenKeys[0];
+            delete tokens[oldestKey];
+          }
+
+          // Add the new token using push to get a unique key
+          const newTokensRef = push(tokensRef);
+          await set(newTokensRef, currentToken);
+          
           console.log('Admin device token saved:', currentToken);
           
           // Automatically send a test notification
@@ -247,3 +274,5 @@ export function AdminDashboard() {
     </div>
   );
 }
+
+    

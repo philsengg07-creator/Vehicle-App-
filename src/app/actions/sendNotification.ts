@@ -2,7 +2,7 @@
 'use server';
 
 import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
-import { getDatabase, ref, get, set } from "firebase-admin/database";
+import { getDatabase, ref, get, set, remove } from "firebase-admin/database";
 import { getMessaging } from "firebase-admin/messaging";
 
 // Function to safely initialize and get the Firebase Admin app
@@ -46,19 +46,21 @@ export async function sendNotification(title: string, body: string) {
   try {
     const app = getFirebaseAdmin();
     const db = getDatabase(app);
-    const tokenRef = ref(db, "adminDeviceToken");
-    const snapshot = await get(tokenRef);
+    const tokensRef = ref(db, "adminDeviceTokens");
+    const snapshot = await get(tokensRef);
 
     if (!snapshot.exists()) {
-      console.log('No admin device token found. Cannot send notification.');
-      return { success: true, message: "No token found" };
+      console.log('No admin device tokens found. Cannot send notification.');
+      return { success: true, message: "No tokens found" };
     }
 
-    const token = snapshot.val();
+    const tokensData = snapshot.val();
+    const tokens = Object.values(tokensData) as string[];
+    const tokenKeys = Object.keys(tokensData);
     
-    if (!token) {
-      console.log('Admin device token is empty. Cannot send notification.');
-      return { success: true, message: "No token found" };
+    if (tokens.length === 0) {
+      console.log('Admin device token list is empty. Cannot send notification.');
+      return { success: true, message: "No tokens found" };
     }
 
     const message = {
@@ -66,33 +68,40 @@ export async function sendNotification(title: string, body: string) {
         title,
         body,
       },
-      token: token,
     };
 
     const messaging = getMessaging(app);
-    const response = await messaging.send(message);
+    const response = await messaging.sendToDevice(tokens, message);
     
     console.log('Successfully sent message:', response);
-    return { success: true, message: "Notification sent" };
+
+    // Clean up invalid tokens
+    const tokensToDelete: { [key: string]: null } = {};
+    response.results.forEach((result, index) => {
+        const error = result.error;
+        if (error) {
+            console.error('Failure sending notification to', tokens[index], error);
+            if (
+                error.code === 'messaging/invalid-registration-token' ||
+                error.code === 'messaging/registration-token-not-registered'
+            ) {
+                const keyToDelete = tokenKeys[index];
+                tokensToDelete[`/adminDeviceTokens/${keyToDelete}`] = null;
+            }
+        }
+    });
+
+    if (Object.keys(tokensToDelete).length > 0) {
+        console.log("Removing invalid tokens:", Object.keys(tokensToDelete));
+        await update(ref(db), tokensToDelete);
+    }
+    
+    return { success: true, message: "Notifications sent" };
     
   } catch (err: any) {
     console.error("Send notification error:", err);
-    
-    if (
-      err.code === 'messaging/invalid-registration-token' ||
-      err.code === 'messaging/registration-token-not-registered'
-    ) {
-       console.log("Invalid or expired token detected. Removing from database.");
-       try {
-         const app = getFirebaseAdmin();
-         const db = getDatabase(app);
-         const tokenRef = ref(db, "adminDeviceToken");
-         await set(tokenRef, null);
-       } catch (dbError) {
-         console.error("Failed to remove token from database:", dbError);
-       }
-    }
-    
     return { success: false, error: err.message };
   }
 }
+
+    
