@@ -131,11 +131,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const taxisRef = ref(db, 'taxis');
       onValue(taxisRef, (snapshot) => {
         const data = snapshot.val();
-        const taxisArray: Taxi[] = data ? Object.keys(data).map(key => ({
-          id: key,
-          ...data[key],
-          bookings: data[key].bookings ? Object.values(data[key].bookings) : [],
-        })) : [];
+        const taxisArray: Taxi[] = data ? Object.keys(data).map(key => {
+          const taxiData = data[key];
+          return {
+            id: key,
+            ...taxiData,
+            bookings: taxiData.bookings ? Object.keys(taxiData.bookings).map(bookingKey => ({
+              id: bookingKey,
+              ...taxiData.bookings[bookingKey]
+            })) : [],
+          };
+        }) : [];
         setTaxis(taxisArray);
       });
   
@@ -300,7 +306,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const employeeBookings = useMemo(() => {
     if (!currentEmployeeId) return [];
     return taxis
-        .flatMap(t => t.bookings ? Object.values(t.bookings).map(b => ({...b, taxiName: t.name, taxiId: t.id})) : [])
+        .flatMap(t => t.bookings ? t.bookings.map(b => ({...b, taxiName: t.name, taxiId: t.id})) : [])
         .filter(b => b.employeeId === currentEmployeeId) as Booking[];
   }, [taxis, currentEmployeeId]);
   
