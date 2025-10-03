@@ -9,52 +9,8 @@ import { ref, onValue, set, remove, push, get, update } from 'firebase/database'
 import { sendNotification as sendPushNotification } from '@/app/actions/sendNotification';
 
 const initialData = {
-  taxis: {
-    "taxi-1": {
-      name: "Metro Cab",
-      capacity: 4,
-      bookedSeats: 2,
-      bookings: {
-          "booking-1": {
-              employeeId: "John Doe",
-              bookingTime: "2024-05-22T10:00:00Z"
-          },
-          "booking-2": {
-              employeeId: "Jane Smith",
-              bookingTime: "2024-05-22T10:05:00Z"
-          }
-      }
-    },
-    "taxi-2": {
-      name: "City Express",
-      capacity: 6,
-      bookedSeats: 6,
-      bookings: {
-          "booking-3": { employeeId: "Alice", bookingTime: "2024-05-22T11:00:00Z" },
-          "booking-4": { employeeId: "Bob", bookingTime: "2024-05-22T11:00:00Z" },
-          "booking-5": { employeeId: "Charlie", bookingTime: "2024-05-22T11:00:00Z" },
-          "booking-6": { employeeId: "Diana", bookingTime: "2024-05-22T11:00:00Z" },
-          "booking-7": { employeeId: "Eve", bookingTime: "2024-05-22T11:00:00Z" },
-          "booking-8": { employeeId: "Frank", bookingTime: "2024-05-22T11:00:00Z" }
-      }
-    },
-    "taxi-3": {
-      name: "Urban Ride",
-      capacity: 5,
-      bookedSeats: 1,
-       bookings: {
-          "booking-9": {
-              employeeId: "Grace",
-              bookingTime: "2024-05-22T12:00:00Z"
-          }
-      }
-    }
-  },
-  remainingEmployees: {
-    "emp-1": "Heidi",
-    "emp-2": "Ivan",
-    "emp-3": "Judy"
-  },
+  taxis: {},
+  remainingEmployees: {},
   notifications: {},
   adminDeviceTokens: {},
 };
@@ -108,7 +64,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const initializeApp = async () => {
       setIsLoading(true);
       try {
-        // 1. Check if we need to reset data
         const lastResetRef = ref(db, 'lastResetTimestamp');
         const snapshot = await get(lastResetRef);
         const lastResetTimestamp = snapshot.val();
@@ -125,7 +80,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.error("Failed during app initialization check:", error);
       }
 
-      // 2. Attach Firebase listeners AFTER the check/reset is complete
       const taxisRef = ref(db, 'taxis');
       const taxisUnsubscribe = onValue(taxisRef, (snapshot) => {
         const data = snapshot.val();
@@ -159,10 +113,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setNotifications(notificationsArray);
       });
 
-      // 3. Finish loading
       setIsLoading(false);
 
-      // Return cleanup function to unsubscribe from listeners on component unmount
       return () => {
         taxisUnsubscribe();
         employeesUnsubscribe();
@@ -338,5 +290,3 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
-
-    
