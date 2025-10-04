@@ -13,12 +13,15 @@ function getFirebaseAdmin(): App {
 
     try {
         let serviceAccount: any;
-        const serviceAccountEnv = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+        // Vercel and other platforms use FIREBASE_SERVICE_ACCOUNT_KEY
+        // GOOGLE_APPLICATION_CREDENTIALS_JSON is a fallback
+        const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+
 
         if (serviceAccountEnv) {
             serviceAccount = JSON.parse(serviceAccountEnv);
         } else {
-            // Fallback for local development if GOOGLE_APPLICATION_CREDENTIALS_JSON is not set.
+            // Fallback for local development if no env var is set.
             const fs = require('fs');
             const path = require('path');
             const serviceAccountPath = path.resolve(process.cwd(), 'ServiceAccountKey.json');
@@ -26,7 +29,7 @@ function getFirebaseAdmin(): App {
                 const serviceAccountString = fs.readFileSync(serviceAccountPath, 'utf8');
                 serviceAccount = JSON.parse(serviceAccountString);
             } else {
-                 throw new Error("Could not initialize Firebase Admin SDK: ServiceAccountKey.json not found and GOOGLE_APPLICATION_CREDENTIALS_JSON is not set.");
+                 throw new Error("Could not initialize Firebase Admin SDK: Service account key not found. Please set FIREBASE_SERVICE_ACCOUNT_KEY or GOOGLE_APPLICATION_CREDENTIALS_JSON environment variables, or place ServiceAccountKey.json in the project root.");
             }
         }
         
@@ -99,5 +102,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
-
-    
