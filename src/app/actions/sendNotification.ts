@@ -2,7 +2,7 @@
 'use server';
 
 import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
-import { getDatabase, ref, get, update } from "firebase-admin/database";
+import { getDatabase, ref, get, remove } from "firebase-admin/database";
 import { getMessaging } from "firebase-admin/messaging";
 
 // Function to safely initialize and get the Firebase Admin app
@@ -16,6 +16,7 @@ function getFirebaseAdmin(): App {
     try {
         let serviceAccount: any;
         const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+        const databaseURL = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || "https://studio-6451719734-ee0cd-default-rtdb.asia-southeast1.firebasedatabase.app/";
 
         if (serviceAccountEnv) {
             serviceAccount = JSON.parse(serviceAccountEnv);
@@ -33,7 +34,7 @@ function getFirebaseAdmin(): App {
         
         return initializeApp({
             credential: cert(serviceAccount),
-            databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || "https://studio-6451719734-ee0cd-default-rtdb.asia-southeast1.firebasedatabase.app/"
+            databaseURL: databaseURL
         }, 'adminApp');
 
     } catch (e: any) {
@@ -46,21 +47,19 @@ export async function sendNotification(title: string, body: string) {
   try {
     const app = getFirebaseAdmin();
     const db = getDatabase(app);
-    const tokensRef = ref(db, "adminDeviceTokens");
-    const snapshot = await get(tokensRef);
+    const tokenRef = ref(db, "adminDeviceToken");
+    const snapshot = await get(tokenRef);
 
     if (!snapshot.exists()) {
-      console.log('No admin device tokens found. Cannot send notification.');
-      return { success: true, message: "No tokens found" };
+      console.log('No admin device token found. Cannot send notification.');
+      return { success: true, message: "No token found" };
     }
 
-    const tokensData = snapshot.val();
-    const tokens = Object.values(tokensData) as string[];
-    const tokenKeys = Object.keys(tokensData);
+    const token = snapshot.val() as string;
     
-    if (tokens.length === 0) {
-      console.log('Admin device token list is empty. Cannot send notification.');
-      return { success: true, message: "No tokens found" };
+    if (!token) {
+      console.log('Admin device token is empty. Cannot send notification.');
+      return { success: true, message: "No token found" };
     }
 
     const message = {
@@ -71,33 +70,26 @@ export async function sendNotification(title: string, body: string) {
     };
 
     const messaging = getMessaging(app);
-    const response = await messaging.sendToDevice(tokens, message);
+    const response = await messaging.sendToDevice([token], message);
     
     console.log('Successfully sent message:', response);
 
-    // Clean up invalid tokens
-    const tokensToDelete: { [key: string]: null } = {};
-    response.results.forEach((result, index) => {
-        const error = result.error;
-        if (error) {
-            console.error('Failure sending notification to', tokens[index], error);
+    // Clean up invalid token
+    if (response.failureCount > 0) {
+        const error = response.results[0].error;
+         if (error) {
+            console.error('Failure sending notification to', token, error);
             if (
                 error.code === 'messaging/invalid-registration-token' ||
                 error.code === 'messaging/registration-token-not-registered'
             ) {
-                const keyToDelete = tokenKeys[index];
-                tokensToDelete[`/adminDeviceTokens/${keyToDelete}`] = null;
+                console.log("Removing invalid token.");
+                await remove(tokenRef);
             }
         }
-    });
-
-    if (Object.keys(tokensToDelete).length > 0) {
-        console.log("Removing invalid tokens:", Object.keys(tokensToDelete).map(k => k.split('/')[2]));
-        const dbRef = ref(db);
-        await update(dbRef, tokensToDelete);
     }
     
-    return { success: true, message: "Notifications sent" };
+    return { success: true, message: "Notification sent" };
     
   } catch (err: any) {
     console.error("Send notification error:", err);
