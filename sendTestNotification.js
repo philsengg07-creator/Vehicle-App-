@@ -9,9 +9,14 @@ import fs from 'fs';
 const serviceAccountPath = './ServiceAccountKey.json';
 let serviceAccount;
 try {
-    serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+    const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+    if (serviceAccountEnv) {
+        serviceAccount = JSON.parse(serviceAccountEnv);
+    } else {
+        serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+    }
 } catch (e) {
-    console.error("❌ Could not read or parse ServiceAccountKey.json. Make sure the file exists in the project root and is valid JSON.", e);
+    console.error("❌ Could not read or parse service account credentials. Make sure the file exists or environment variables are set.", e);
     process.exit(1);
 }
 
@@ -19,31 +24,29 @@ try {
 if (!getApps().length) {
     initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        databaseURL: "https://studio-6451719734-ee0cd-default-rtdb.asia-southeast1.firebasedatabase.app"
+        databaseURL: process.env.FIREBASE_DATABASE_URL || "https://studio-6451719734-ee0cd-default-rtdb.asia-southeast1.firebasedatabase.app/"
     });
 }
-
 
 const db = getDatabase();
 
 async function sendTestNotification() {
   try {
-    // 2. Fetch the latest admin device token from DB
-    const snapshot = await db.ref("adminDeviceToken").once("value");
-    const token = snapshot.val();
+    // 2. Hardcode the device token for testing
+    const token = "fpPfGdGC4F9ZvZG0XG9x8E:APA91bH_sIzLJYeizPSHVxcqvjaZLxGu91YTvv0PsJevtbsxJu1tqp-Int0yWUUD2fxAUZiXLIAg_JelMluUydToG3Zy5SM2Jp5Lud2bhjzfJ8j-rdLr9SI";
 
     if (!token) {
-      console.error("❌ No token found in /adminDeviceToken. Please log in as an admin on your device first.");
+      console.error("❌ Hardcoded token is missing.");
       process.exit(1);
     }
 
-    console.log("✅ Found token:", token);
+    console.log("✅ Using hardcoded token:", token);
 
     // 3. Build a sample notification payload
     const payload = {
       notification: {
-        title: "Test Notification",
-        body: "If you see this, push is working 🎉"
+        title: "Direct Token Test",
+        body: "If you see this, sending to a specific token is working 🎉"
       }
     };
 
@@ -57,15 +60,15 @@ async function sendTestNotification() {
     console.log("📩 Send response:", response);
 
     if (response) {
-        console.log("\n✅ Notification sent successfully to FCM. If you didn't see it on your device, the problem is on the client-side (service worker).");
+        console.log("\n✅ Notification sent successfully to FCM. If you didn't see it on your device, the problem is on the client-side (service worker) or the token is invalid/expired.");
     }
 
   } catch (err) {
     console.error("🔥 Error sending notification:", err);
     if (err.code === 'messaging/registration-token-not-registered') {
-        console.error("\n❗️ The token is invalid or expired. Please log out and log back in as admin on your device to get a new token.");
+        console.error("\n❗️ The token is invalid or expired. The device cannot receive the notification.");
     } else {
-        console.error("\n❌ The notification failed to send from the server. The problem is on the server-side.");
+        console.error("\n❌ The notification failed to send from the server. The problem is on the server-side, likely with permissions or Firebase plan limitations.");
     }
   } finally {
     process.exit(0);
