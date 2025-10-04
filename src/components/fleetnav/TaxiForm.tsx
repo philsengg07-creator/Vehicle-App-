@@ -11,6 +11,7 @@ import type { Taxi } from "@/types";
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   capacity: z.coerce.number().int().min(1, "Capacity must be at least 1 seat.").max(50, "Capacity cannot exceed 50 seats."),
+  bookingDeadline: z.string().optional(),
 });
 
 export type TaxiFormValues = z.infer<typeof formSchema>;
@@ -27,6 +28,7 @@ export function TaxiForm({ taxi, onSubmit, onClose }: TaxiFormProps) {
     defaultValues: {
       name: taxi?.name || "",
       capacity: taxi?.capacity || 4,
+      bookingDeadline: taxi?.bookingDeadline || "",
     },
   });
 
@@ -58,6 +60,19 @@ export function TaxiForm({ taxi, onSubmit, onClose }: TaxiFormProps) {
               <FormLabel>Seat Capacity</FormLabel>
               <FormControl>
                 <Input type="number" min="1" max="50" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="bookingDeadline"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Booking Deadline (24hr format)</FormLabel>
+              <FormControl>
+                <Input type="time" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

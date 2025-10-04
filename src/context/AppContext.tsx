@@ -205,6 +205,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     
     const taxi = { id: taxiId, ...taxiSnapshot.val() };
+
+    // Check for booking deadline
+    if (taxi.bookingDeadline) {
+        const now = new Date();
+        const [hours, minutes] = taxi.bookingDeadline.split(':').map(Number);
+        const deadlineDate = new Date();
+        deadlineDate.setHours(hours, minutes, 0, 0);
+
+        if (now > deadlineDate) {
+            toast({
+                variant: "destructive",
+                title: "Booking Closed",
+                description: `The booking deadline for ${taxi.name} has passed.`,
+            });
+            return;
+        }
+    }
     
     const addNotification = async (message: string, shouldPush: boolean = false) => {
         const notificationsRef = ref(db, 'notifications');

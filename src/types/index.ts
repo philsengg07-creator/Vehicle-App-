@@ -6,6 +6,7 @@ export interface Taxi {
   capacity: number;
   bookedSeats: number;
   bookings: Booking[];
+  bookingDeadline?: string; // e.g., "17:00"
 }
 
 export interface Booking {

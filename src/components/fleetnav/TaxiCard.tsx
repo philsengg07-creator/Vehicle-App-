@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { Users, Edit, Trash2, CheckCircle, Car } from "lucide-react";
+import { Users, Edit, Trash2, CheckCircle, Car, Clock } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import type { Taxi } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -17,12 +17,30 @@ interface TaxiCardProps {
   onEdit: (taxi: Taxi) => void;
 }
 
+function isBookingClosed(deadline?: string): boolean {
+  if (!deadline) return false;
+  const now = new Date();
+  const [hours, minutes] = deadline.split(':').map(Number);
+  const deadlineDate = new Date();
+  deadlineDate.setHours(hours, minutes, 0, 0);
+  return now > deadlineDate;
+}
+
+function formatTimeToAMPM(time: string) {
+    const [hours, minutes] = time.split(':').map(Number);
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const formattedHours = hours % 12 || 12; // Convert 0 to 12
+    const formattedMinutes = minutes.toString().padStart(2, '0');
+    return `${formattedHours}:${formattedMinutes} ${ampm}`;
+}
+
 export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
   const { role, bookSeat, deleteTaxi, currentEmployeeId } = useApp();
   
   const isFull = taxi.bookedSeats >= taxi.capacity;
   const progressValue = (taxi.bookedSeats / taxi.capacity) * 100;
   const isBookedByCurrentUser = taxi.bookings.some(b => b.employeeId === currentEmployeeId);
+  const bookingClosed = isBookingClosed(taxi.bookingDeadline);
 
   const handleBookClick = () => {
     bookSeat(taxi.id);
@@ -38,7 +56,10 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
         <div className="flex flex-col h-full cursor-pointer">
           <CardHeader className="flex-row justify-between items-start">
             <CardTitle className="font-headline text-xl">{taxi.name}</CardTitle>
-            {isFull && <Badge variant="destructive" className="shadow-lg">Full</Badge>}
+            <div className="flex flex-col items-end gap-2">
+              {isFull && <Badge variant="destructive" className="shadow-lg">Full</Badge>}
+              {bookingClosed && !isFull && <Badge variant="secondary" className="shadow-lg">Booking Closed</Badge>}
+            </div>
           </CardHeader>
           <CardContent className="flex-grow">
             <div className="space-y-4">
@@ -50,6 +71,15 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
                     <span className="font-medium text-foreground">{taxi.bookedSeats} / {taxi.capacity}</span>
                 </div>
                 <Progress value={progressValue} aria-label={`${taxi.bookedSeats} of ${taxi.capacity} seats booked`} />
+                {taxi.bookingDeadline && (
+                  <div className="flex items-center justify-between text-sm text-muted-foreground pt-2">
+                      <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          <span>Booking Closes</span>
+                      </div>
+                      <span className="font-medium text-foreground">{formatTimeToAMPM(taxi.bookingDeadline)}</span>
+                  </div>
+                )}
             </div>
           </CardContent>
         </div>
@@ -77,7 +107,10 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
     <>
       <CardHeader className="flex-row justify-between items-start">
         <CardTitle className="font-headline text-xl">{taxi.name}</CardTitle>
-        {isFull && <Badge variant="destructive" className="shadow-lg">Full</Badge>}
+        <div className="flex flex-col items-end gap-2">
+            {isFull && <Badge variant="destructive" className="shadow-lg">Full</Badge>}
+            {bookingClosed && !isFull && <Badge variant="secondary" className="shadow-lg">Booking Closed</Badge>}
+        </div>
       </CardHeader>
       <CardContent className="flex-grow">
         <div className="space-y-4">
@@ -86,11 +119,20 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
                     <Users className="h-4 w-4" />
                     <span>Capacity</span>
                 </div>
-                {role === 'admin' || isFull ? (
+                {role === 'admin' || isFull || bookingClosed ? (
                   <span className="font-medium text-foreground">{taxi.bookedSeats} / {taxi.capacity}</span>
                 ) : null }
             </div>
             <Progress value={progressValue} aria-label={`${taxi.bookedSeats} of ${taxi.capacity} seats booked`} />
+             {taxi.bookingDeadline && (
+                <div className="flex items-center justify-between text-sm text-muted-foreground pt-2">
+                    <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        <span>Booking Closes</span>
+                    </div>
+                    <span className="font-medium text-foreground">{formatTimeToAMPM(taxi.bookingDeadline)}</span>
+                </div>
+            )}
         </div>
       </CardContent>
     </>
@@ -130,7 +172,7 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
         ) : (
           <Button
             onClick={handleBookClick}
-            disabled={isBookedByCurrentUser}
+            disabled={isBookedByCurrentUser || bookingClosed}
             className="w-full transition-all"
             variant={isBookedByCurrentUser ? "secondary" : "default"}
           >
@@ -138,6 +180,11 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
               <>
                 <CheckCircle className="mr-2 h-4 w-4" />
                 Booked
+              </>
+            ) : bookingClosed ? (
+              <>
+                  <Clock className="mr-2 h-4 w-4"/>
+                  Booking Closed
               </>
             ) : isFull ? (
                 <>
