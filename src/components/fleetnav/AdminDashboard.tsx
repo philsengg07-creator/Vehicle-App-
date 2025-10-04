@@ -86,7 +86,7 @@ export function AdminDashboard() {
 
           // Add the new token
           const newTokenRef = push(ref(db, 'adminDeviceTokens'));
-          updates[newTokenRef.key!] = currentToken;
+          updates[`/adminDeviceTokens/${newTokenRef.key}`] = currentToken;
           
           await update(ref(db), updates);
           

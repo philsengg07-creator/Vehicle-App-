@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
-import { getDatabase, update } from "firebase-admin/database";
+import { getDatabase, ref, update } from "firebase-admin/database";
 import { getMessaging } from "firebase-admin/messaging";
 
 let adminApp: App;
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
   try {
     const app = getFirebaseAdmin();
     const db = getDatabase(app);
-    const tokensRef = db.ref("adminDeviceTokens");
+    const tokensRef = ref(db, "adminDeviceTokens");
     const snapshot = await tokensRef.once("value");
 
     if (!snapshot.exists()) {
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
 
      if (Object.keys(tokensToDelete).length > 0) {
         console.log("Removing invalid tokens:", Object.keys(tokensToDelete));
-        await update(db.ref(), tokensToDelete);
+        await update(ref(db), tokensToDelete);
     }
     
     return NextResponse.json({ success: true, message: "Notification sent", response });
