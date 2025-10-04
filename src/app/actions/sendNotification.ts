@@ -14,23 +14,14 @@ function getFirebaseAdmin(): App {
     }
 
     try {
-        let serviceAccount: any;
         const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
         const databaseURL = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || "https://studio-6451719734-ee0cd-default-rtdb.asia-southeast1.firebasedatabase.app/";
 
-        if (serviceAccountEnv) {
-            serviceAccount = JSON.parse(serviceAccountEnv);
-        } else {
-            const fs = require('fs');
-            const path = require('path');
-            const serviceAccountPath = path.resolve(process.cwd(), 'ServiceAccountKey.json');
-            if (fs.existsSync(serviceAccountPath)) {
-                const serviceAccountString = fs.readFileSync(serviceAccountPath, 'utf8');
-                serviceAccount = JSON.parse(serviceAccountString);
-            } else {
-                 throw new Error("Could not initialize Firebase Admin SDK: Service account key not found. Please set FIREBASE_SERVICE_ACCOUNT_KEY or GOOGLE_APPLICATION_CREDENTIALS_JSON environment variables, or place ServiceAccountKey.json in the project root.");
-            }
+        if (!serviceAccountEnv) {
+            throw new Error("Could not initialize Firebase Admin SDK: Service account key not found. Please set FIREBASE_SERVICE_ACCOUNT_KEY or GOOGLE_APPLICATION_CREDENTIALS_JSON environment variables.");
         }
+        
+        const serviceAccount = JSON.parse(serviceAccountEnv);
         
         return initializeApp({
             credential: cert(serviceAccount),
@@ -70,7 +61,7 @@ export async function sendNotification(title: string, body: string) {
     };
 
     const messaging = getMessaging(app);
-    const response = await messaging.sendToDevice([token], message);
+    const response = await messaging.sendToDevice(token, message);
     
     console.log('Successfully sent message:', response);
 
@@ -96,3 +87,4 @@ export async function sendNotification(title: string, body: string) {
     return { success: false, error: err.message };
   }
 }
+
