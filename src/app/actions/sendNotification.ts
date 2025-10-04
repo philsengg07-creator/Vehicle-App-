@@ -66,33 +66,24 @@ export async function sendNotification(title: string, body: string) {
         title,
         body,
       },
+      token: token,
     };
 
     const messaging = getMessaging(app);
-    const response = await messaging.sendToDevice([token], message);
+    const response = await messaging.send(message);
     
     console.log('Successfully sent message:', response);
-
-    // Clean up invalid token
-    if (response.failureCount > 0) {
-        const error = response.results[0].error;
-         if (error) {
-            console.error('Failure sending notification to', token, error);
-            if (
-                error.code === 'messaging/invalid-registration-token' ||
-                error.code === 'messaging/registration-token-not-registered'
-            ) {
-                console.log("Removing invalid token.");
-                await remove(tokenRef);
-            }
-        }
-    }
     
     return { success: true, message: "Notification sent" };
     
   } catch (err: any)
    {
     console.error("Send notification error:", err);
+     if (err.code === 'messaging/registration-token-not-registered') {
+        console.log("Token is not registered, removing from database.");
+        const tokenRef = ref(db, "adminDeviceToken");
+        await remove(tokenRef);
+    }
     // Add this check to log the specific JWT error if it occurs
     if (err.code === 'app/invalid-credential' || (err.message && err.message.includes('Invalid JWT Signature'))) {
         console.error("Authentication failed: The service account key is likely misconfigured. Please check your environment variables.");

@@ -61,30 +61,22 @@ export async function POST(request: Request) {
       notification: {
         title: 'Test Notification',
         body: 'If you see this, push is working 🎉'
-      }
+      },
+      token: token,
     };
 
     const messaging = getMessaging(app);
-    const response = await messaging.sendToDevice([token], message);
-
-     if (response.failureCount > 0) {
-        const error = response.results[0].error;
-        if (error) {
-            console.error('Failure sending notification to', token, error);
-            if (
-                error.code === 'messaging/invalid-registration-token' ||
-                error.code === 'messaging/registration-token-not-registered'
-            ) {
-                console.log("Removing invalid token.");
-                await remove(tokenRef);
-            }
-        }
-    }
+    const response = await messaging.send(message);
     
     return NextResponse.json({ success: true, message: "Notification sent", response });
     
   } catch (err: any) {
     console.error("API send-notification error:", err);
+     if (err.code === 'messaging/registration-token-not-registered') {
+        console.log("Token is not registered, removing from database.");
+        const tokenRef = ref(db, "adminDeviceToken");
+        await remove(tokenRef);
+    }
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
