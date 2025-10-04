@@ -9,8 +9,15 @@ import fs from 'fs';
 const serviceAccountPath = './ServiceAccountKey.json';
 let serviceAccount;
 try {
-    // We will now prioritize reading from the file for local testing.
-    serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+    const serviceAccountString = fs.readFileSync(serviceAccountPath, 'utf8');
+    serviceAccount = JSON.parse(serviceAccountString);
+    
+    // THE FIX: The private key from some sources has literal '\\n' instead of newlines.
+    // We will programmatically replace them with actual newlines.
+    if (serviceAccount.private_key) {
+        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+    }
+
 } catch (e) {
     console.error("❌ Could not read or parse 'ServiceAccountKey.json'. Please make sure the file exists and you have pasted your new service account key into it.", e);
     process.exit(1);
