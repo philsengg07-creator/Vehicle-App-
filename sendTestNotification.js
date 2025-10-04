@@ -9,14 +9,10 @@ import fs from 'fs';
 const serviceAccountPath = './ServiceAccountKey.json';
 let serviceAccount;
 try {
-    const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-    if (serviceAccountEnv) {
-        serviceAccount = JSON.parse(serviceAccountEnv);
-    } else {
-        serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-    }
+    // We will now prioritize reading from the file for local testing.
+    serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
 } catch (e) {
-    console.error("❌ Could not read or parse service account credentials. Make sure the file exists or environment variables are set.", e);
+    console.error("❌ Could not read or parse 'ServiceAccountKey.json'. Please make sure the file exists and you have pasted your new service account key into it.", e);
     process.exit(1);
 }
 
