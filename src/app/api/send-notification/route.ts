@@ -74,6 +74,7 @@ export async function POST(request: Request) {
     console.error("API send-notification error:", err);
      if (err.code === 'messaging/registration-token-not-registered') {
         console.log("Token is not registered, removing from database.");
+        const db = getDatabase(getFirebaseAdmin());
         const tokenRef = ref(db, "adminDeviceToken");
         await remove(tokenRef);
     }
