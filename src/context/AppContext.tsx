@@ -129,7 +129,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error("Failed during app initialization check:", error);
       } finally {
-        // This MUST be in the finally block to ensure listeners are always attached.
         attachListeners();
       }
     };
@@ -354,3 +353,5 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
+
+    
