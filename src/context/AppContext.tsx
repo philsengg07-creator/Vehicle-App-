@@ -12,13 +12,13 @@ async function resetData() {
   try {
     const updates: { [key: string]: any } = {};
     
-    // Fetch current taxis to reset bookings
     const taxisSnapshot = await get(ref(db, 'taxis'));
     if (taxisSnapshot.exists()) {
       const taxis = taxisSnapshot.val();
       for (const taxiId in taxis) {
         updates[`/taxis/${taxiId}/bookedSeats`] = 0;
         updates[`/taxis/${taxiId}/bookings`] = null;
+        updates[`/taxis/${taxiId}/bookingDeadline`] = null;
       }
     }
 
@@ -67,8 +67,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initializeApp = async () => {
-      setIsLoading(true);
-
+      
       const attachListeners = () => {
         const taxisRef = ref(db, 'taxis');
         const taxisUnsubscribe = onValue(taxisRef, (snapshot) => {
@@ -113,6 +112,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       };
 
       try {
+        setIsLoading(true);
         const lastResetRef = ref(db, 'lastResetTimestamp');
         const snapshot = await get(lastResetRef);
         const lastResetTimestamp = snapshot.val();
@@ -206,7 +206,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
     const taxi = { id: taxiId, ...taxiSnapshot.val() };
 
-    // Check for booking deadline
     if (taxi.bookingDeadline) {
         const now = new Date();
         const [hours, minutes] = taxi.bookingDeadline.split(':').map(Number);
