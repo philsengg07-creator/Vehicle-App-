@@ -8,20 +8,18 @@ import { getMessaging } from "firebase-admin/messaging";
 // Function to safely initialize and get the Firebase Admin app
 function getFirebaseAdmin(): App {
     const apps = getApps();
-    if (apps.length > 0 && apps.find(app => app.name === 'adminApp')) {
-        return apps.find(app => app.name === 'adminApp')!;
+    const adminApp = apps.find(app => app.name === 'adminApp');
+    if (adminApp) {
+        return adminApp;
     }
 
     try {
         let serviceAccount: any;
-        // Vercel and other platforms use FIREBASE_SERVICE_ACCOUNT_KEY
-        // GOOGLE_APPLICATION_CREDENTIALS_JSON is a fallback
         const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
 
         if (serviceAccountEnv) {
             serviceAccount = JSON.parse(serviceAccountEnv);
         } else {
-            // Fallback for local development if no env var is set.
             const fs = require('fs');
             const path = require('path');
             const serviceAccountPath = path.resolve(process.cwd(), 'ServiceAccountKey.json');
@@ -35,7 +33,7 @@ function getFirebaseAdmin(): App {
         
         return initializeApp({
             credential: cert(serviceAccount),
-            databaseURL: "https://studio-6451719734-ee0cd-default-rtdb.asia-southeast1.firebasedatabase.app"
+            databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || "https://studio-6451719734-ee0cd-default-rtdb.asia-southeast1.firebasedatabase.app/"
         }, 'adminApp');
 
     } catch (e: any) {
@@ -94,7 +92,7 @@ export async function sendNotification(title: string, body: string) {
     });
 
     if (Object.keys(tokensToDelete).length > 0) {
-        console.log("Removing invalid tokens:", Object.keys(tokensToDelete));
+        console.log("Removing invalid tokens:", Object.keys(tokensToDelete).map(k => k.split('/')[1]));
         const dbRef = ref(db);
         await update(dbRef, tokensToDelete);
     }
