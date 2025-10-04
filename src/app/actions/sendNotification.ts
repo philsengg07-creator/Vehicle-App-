@@ -86,13 +86,13 @@ export async function sendNotification(title: string, body: string) {
                 error.code === 'messaging/registration-token-not-registered'
             ) {
                 const keyToDelete = tokenKeys[index];
-                tokensToDelete[`adminDeviceTokens/${keyToDelete}`] = null;
+                tokensToDelete[`/adminDeviceTokens/${keyToDelete}`] = null;
             }
         }
     });
 
     if (Object.keys(tokensToDelete).length > 0) {
-        console.log("Removing invalid tokens:", Object.keys(tokensToDelete).map(k => k.split('/')[1]));
+        console.log("Removing invalid tokens:", Object.keys(tokensToDelete).map(k => k.split('/')[2]));
         const dbRef = ref(db);
         await update(dbRef, tokensToDelete);
     }
