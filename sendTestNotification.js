@@ -1,3 +1,4 @@
+
 // sendTestNotification.js
 const admin = require("firebase-admin");
 const { initializeApp, getApps } = require("firebase-admin/app");
@@ -70,7 +71,10 @@ async function sendTestNotification() {
     console.error("🔥 Error sending notification:", err);
     if (err.code === 'messaging/registration-token-not-registered') {
         console.error("\n❗️ The token is invalid or expired. The device cannot receive the notification.");
-    } else {
+    } else if (err.code === 'messaging/invalid-argument') {
+        console.error("\n❗️ The hardcoded token is not a valid FCM registration token. It may be corrupted or partially copied.");
+    }
+    else {
         console.error("\n❌ The notification failed to send from the server. The problem is on the server-side, likely with permissions or Firebase plan limitations.");
     }
   } finally {
