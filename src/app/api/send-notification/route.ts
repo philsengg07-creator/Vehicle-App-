@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
-import { getDatabase, ref, update } from "firebase-admin/database";
+import { getDatabase, ref, get, update } from "firebase-admin/database";
 import { getMessaging } from "firebase-admin/messaging";
 
 let adminApp: App;
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     const app = getFirebaseAdmin();
     const db = getDatabase(app);
     const tokensRef = ref(db, "adminDeviceTokens");
-    const snapshot = await tokensRef.once("value");
+    const snapshot = await get(tokensRef);
 
     if (!snapshot.exists()) {
       return NextResponse.json({ success: true, message: 'No tokens found' });

@@ -55,16 +55,9 @@ export function AdminDashboard() {
           const snapshot = await get(tokensRef);
           const tokens: { [key: string]: string } = snapshot.val() || {};
           
-          let existingKey: string | undefined;
-          for (const key in tokens) {
-            if (tokens[key] === currentToken) {
-              existingKey = key;
-              break;
-            }
-          }
+          const isTokenAlreadySaved = Object.values(tokens).includes(currentToken);
 
-          if (existingKey) {
-            // If token exists, just show a confirmation. No need to re-add.
+          if (isTokenAlreadySaved) {
              toast({
               title: "Notifications Already Enabled",
               description: "This device is already registered for notifications.",
@@ -74,21 +67,9 @@ export function AdminDashboard() {
             return;
           }
 
-          // If we reach here, the token is new.
-          const updates: { [key: string]: any } = {};
-          const tokenKeys = Object.keys(tokens);
-
-          // Manage token list size - remove the oldest if we're at capacity
-          if (tokenKeys.length >= 5) {
-            const oldestKey = tokenKeys[0]; // Assuming order is maintained, which it is for push keys
-            updates[`/adminDeviceTokens/${oldestKey}`] = null;
-          }
-
-          // Add the new token
-          const newTokenRef = push(ref(db, 'adminDeviceTokens'));
-          updates[`/adminDeviceTokens/${newTokenRef.key}`] = currentToken;
-          
-          await update(ref(db), updates);
+          // If we reach here, the token is new. Add it.
+          const newTokenRef = push(tokensRef);
+          await set(newTokenRef, currentToken);
           
           console.log('Admin device token saved:', currentToken);
           

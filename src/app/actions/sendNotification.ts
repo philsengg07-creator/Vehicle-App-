@@ -88,7 +88,7 @@ export async function sendNotification(title: string, body: string) {
                 error.code === 'messaging/registration-token-not-registered'
             ) {
                 const keyToDelete = tokenKeys[index];
-                tokensToDelete[`/adminDeviceTokens/${keyToDelete}`] = null;
+                tokensToDelete[`adminDeviceTokens/${keyToDelete}`] = null;
             }
         }
     });
