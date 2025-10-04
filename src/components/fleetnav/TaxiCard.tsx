@@ -17,13 +17,18 @@ interface TaxiCardProps {
   onEdit: (taxi: Taxi) => void;
 }
 
-function isBookingClosed(deadline?: string): boolean {
-  if (!deadline) return false;
+function isBookingClosed(taxi: Taxi): boolean {
+  if (taxi.bookedSeats >= taxi.capacity) return true;
+  if (!taxi.bookingDeadline) return false;
+  
   const now = new Date();
-  const [hours, minutes] = deadline.split(':').map(Number);
+  const [hours, minutes] = taxi.bookingDeadline.split(':').map(Number);
   const deadlineDate = new Date();
   deadlineDate.setHours(hours, minutes, 0, 0);
-  return now > deadlineDate;
+
+  // Booking is only closed if the deadline has passed AND the taxi is full.
+  // If it's not full, employees can still join the waiting list.
+  return now > deadlineDate && taxi.bookedSeats >= taxi.capacity;
 }
 
 function formatTimeToAMPM(time: string) {
@@ -40,15 +45,14 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
   const isFull = taxi.bookedSeats >= taxi.capacity;
   const progressValue = (taxi.bookedSeats / taxi.capacity) * 100;
   const isBookedByCurrentUser = taxi.bookings.some(b => b.employeeId === currentEmployeeId);
-  const bookingClosed = isBookingClosed(taxi.bookingDeadline);
-
-  const handleBookClick = () => {
-    bookSeat(taxi.id);
-  };
-
-  const handleDeleteClick = () => {
-    deleteTaxi(taxi.id);
-  };
+  
+  const now = new Date();
+  const deadlineDate = new Date();
+  if (taxi.bookingDeadline) {
+    const [hours, minutes] = taxi.bookingDeadline.split(':').map(Number);
+    deadlineDate.setHours(hours, minutes, 0, 0);
+  }
+  const bookingDeadlinePassed = taxi.bookingDeadline ? now > deadlineDate : false;
 
   const AdminCardContent = () => (
     <Dialog>
@@ -58,7 +62,7 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
             <CardTitle className="font-headline text-xl">{taxi.name}</CardTitle>
             <div className="flex flex-col items-end gap-2">
               {isFull && <Badge variant="destructive" className="shadow-lg">Full</Badge>}
-              {bookingClosed && !isFull && <Badge variant="secondary" className="shadow-lg">Booking Closed</Badge>}
+              {bookingDeadlinePassed && !isFull && <Badge variant="secondary" className="shadow-lg">Booking Closed</Badge>}
             </div>
           </CardHeader>
           <CardContent className="flex-grow">
@@ -109,7 +113,7 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
         <CardTitle className="font-headline text-xl">{taxi.name}</CardTitle>
         <div className="flex flex-col items-end gap-2">
             {isFull && <Badge variant="destructive" className="shadow-lg">Full</Badge>}
-            {bookingClosed && !isFull && <Badge variant="secondary" className="shadow-lg">Booking Closed</Badge>}
+            {bookingDeadlinePassed && !isFull && <Badge variant="secondary" className="shadow-lg">Booking Closed</Badge>}
         </div>
       </CardHeader>
       <CardContent className="flex-grow">
@@ -119,7 +123,7 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
                     <Users className="h-4 w-4" />
                     <span>Capacity</span>
                 </div>
-                {role === 'admin' || isFull || bookingClosed ? (
+                {role === 'admin' || isFull || bookingDeadlinePassed ? (
                   <span className="font-medium text-foreground">{taxi.bookedSeats} / {taxi.capacity}</span>
                 ) : null }
             </div>
@@ -172,7 +176,7 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
         ) : (
           <Button
             onClick={handleBookClick}
-            disabled={isBookedByCurrentUser || bookingClosed}
+            disabled={isBookedByCurrentUser || bookingDeadlinePassed}
             className="w-full transition-all"
             variant={isBookedByCurrentUser ? "secondary" : "default"}
           >
@@ -181,7 +185,7 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
                 <CheckCircle className="mr-2 h-4 w-4" />
                 Booked
               </>
-            ) : bookingClosed ? (
+            ) : bookingDeadlinePassed ? (
               <>
                   <Clock className="mr-2 h-4 w-4"/>
                   Booking Closed

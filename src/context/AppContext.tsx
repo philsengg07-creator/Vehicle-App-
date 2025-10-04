@@ -12,6 +12,7 @@ async function resetData() {
   try {
     const updates: { [key: string]: any } = {};
     
+    // Fetch all taxis to update them
     const taxisSnapshot = await get(ref(db, 'taxis'));
     if (taxisSnapshot.exists()) {
       const taxis = taxisSnapshot.val();
@@ -127,6 +128,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error("Failed during app initialization check:", error);
       } finally {
+        // This MUST be in the finally block to ensure listeners are always attached.
         attachListeners();
       }
     };
