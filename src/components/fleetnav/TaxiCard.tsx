@@ -17,21 +17,8 @@ interface TaxiCardProps {
   onEdit: (taxi: Taxi) => void;
 }
 
-function isBookingClosed(taxi: Taxi): boolean {
-  if (taxi.bookedSeats >= taxi.capacity) return true;
-  if (!taxi.bookingDeadline) return false;
-  
-  const now = new Date();
-  const [hours, minutes] = taxi.bookingDeadline.split(':').map(Number);
-  const deadlineDate = new Date();
-  deadlineDate.setHours(hours, minutes, 0, 0);
-
-  // Booking is only closed if the deadline has passed AND the taxi is full.
-  // If it's not full, employees can still join the waiting list.
-  return now > deadlineDate && taxi.bookedSeats >= taxi.capacity;
-}
-
 function formatTimeToAMPM(time: string) {
+    if (!time) return '';
     const [hours, minutes] = time.split(':').map(Number);
     const ampm = hours >= 12 ? 'PM' : 'AM';
     const formattedHours = hours % 12 || 12; // Convert 0 to 12
@@ -53,6 +40,14 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
     deadlineDate.setHours(hours, minutes, 0, 0);
   }
   const bookingDeadlinePassed = taxi.bookingDeadline ? now > deadlineDate : false;
+
+  const handleDeleteClick = () => {
+    deleteTaxi(taxi.id);
+  };
+
+  const handleBookClick = () => {
+    bookSeat(taxi.id);
+  };
 
   const AdminCardContent = () => (
     <Dialog>
