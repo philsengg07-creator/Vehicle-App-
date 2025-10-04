@@ -1,9 +1,9 @@
 
-// Scripts for Firebase products when running in the service worker context.
-importScripts("https://www.gstatic.com/firebasejs/10.12.3/firebase-app-compat.js");
-importScripts("https://www.gstatic.com/firebasejs/10.12.3/firebase-messaging-compat.js");
+// Import and initialize the Firebase SDK
+// This is required to receive background notifications.
+importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js');
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyAdJXY7HLBRqWzur4JH3FNuVOCe_ItTyOk",
   authDomain: "studio-6451719734-ee0cd.firebaseapp.com",
@@ -14,18 +14,21 @@ const firebaseConfig = {
   databaseURL: "https://studio-6451719734-ee0cd-default-rtdb.asia-southeast1.firebasedatabase.app/"
 };
 
-// Initialize Firebase
-const app = firebase.initializeApp(firebaseConfig);
-const messaging = firebase.messaging(app);
 
-// Background message handler
-messaging.onBackgroundMessage(function(payload) {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload);
+firebase.initializeApp(firebaseConfig);
+
+const messaging = firebase.messaging();
+
+messaging.onBackgroundMessage((payload) => {
+  console.log(
+    '[firebase-messaging-sw.js] Received background message ',
+    payload
+  );
   
   const notificationTitle = payload.notification.title;
   const notificationOptions = {
     body: payload.notification.body,
-    icon: '/firebase-logo.png' // Optional: you can add an icon here
+    icon: '/favicon.ico' // You can add a custom icon here
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
