@@ -9,22 +9,21 @@ import { ref, onValue, set, remove, push, get, update } from 'firebase/database'
 import { sendNotification as sendPushNotification } from '@/app/actions/sendNotification';
 
 const initialData = {
-  taxis: {},
   remainingEmployees: {},
   notifications: {},
-  adminDeviceTokens: {},
 };
 
 
 async function resetData() {
   try {
-    const dbRef = ref(db);
-    const dataToSet = {
-        ...initialData,
-        lastResetTimestamp: new Date().toISOString()
-    };
-    await set(dbRef, dataToSet);
-    console.log('Database reset successfully via client-side.');
+    const updates: { [key: string]: any } = {};
+    updates['/remainingEmployees'] = null;
+    updates['/notifications'] = null;
+    updates['/lastResetTimestamp'] = new Date().toISOString();
+
+    await update(ref(db), updates);
+    
+    console.log('Daily data reset successfully via client-side.');
   } catch (error) {
     console.error('Error resetting data from client:', error);
     throw error;
@@ -80,6 +79,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.error("Failed during app initialization check:", error);
       }
 
+      // Attach listeners after the check is complete
       const taxisRef = ref(db, 'taxis');
       const taxisUnsubscribe = onValue(taxisRef, (snapshot) => {
         const data = snapshot.val();
