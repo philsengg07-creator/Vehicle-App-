@@ -8,15 +8,20 @@ import { db } from '@/lib/firebase';
 import { ref, onValue, set, remove, push, get, update } from 'firebase/database';
 import { sendNotification as sendPushNotification } from '@/app/actions/sendNotification';
 
-const initialData = {
-  remainingEmployees: {},
-  notifications: {},
-};
-
-
 async function resetData() {
   try {
     const updates: { [key: string]: any } = {};
+    
+    // Fetch current taxis to reset bookings
+    const taxisSnapshot = await get(ref(db, 'taxis'));
+    if (taxisSnapshot.exists()) {
+      const taxis = taxisSnapshot.val();
+      for (const taxiId in taxis) {
+        updates[`/taxis/${taxiId}/bookedSeats`] = 0;
+        updates[`/taxis/${taxiId}/bookings`] = null;
+      }
+    }
+
     updates['/remainingEmployees'] = null;
     updates['/notifications'] = null;
     updates['/lastResetTimestamp'] = new Date().toISOString();
@@ -29,6 +34,7 @@ async function resetData() {
     throw error;
   }
 }
+
 
 export interface AppContextType {
   role: UserRole | null;
@@ -62,6 +68,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initializeApp = async () => {
       setIsLoading(true);
+
+      const attachListeners = () => {
+        const taxisRef = ref(db, 'taxis');
+        const taxisUnsubscribe = onValue(taxisRef, (snapshot) => {
+          const data = snapshot.val();
+          const taxisArray: Taxi[] = data ? Object.keys(data).map(key => {
+            const taxiData = data[key];
+            return {
+              id: key,
+              ...taxiData,
+              bookings: taxiData.bookings ? Object.keys(taxiData.bookings).map(bookingKey => ({
+                id: bookingKey,
+                ...taxiData.bookings[bookingKey]
+              })) : [],
+            };
+          }) : [];
+          setTaxis(taxisArray);
+        });
+    
+        const remainingEmployeesRef = ref(db, 'remainingEmployees');
+        const employeesUnsubscribe = onValue(remainingEmployeesRef, (snapshot) => {
+            const data = snapshot.val();
+            setRemainingEmployees(data ? Object.values(data) as string[] : []);
+        });
+    
+        const notificationsRef = ref(db, 'notifications');
+        const notificationsUnsubscribe = onValue(notificationsRef, (snapshot) => {
+            const data = snapshot.val();
+            const notificationsArray: AppNotification[] = data ? Object.keys(data).map(key => ({
+                id: key,
+                ...data[key]
+            })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
+            setNotifications(notificationsArray);
+        });
+
+        setIsLoading(false);
+  
+        return () => {
+          taxisUnsubscribe();
+          employeesUnsubscribe();
+          notificationsUnsubscribe();
+        };
+      };
+
       try {
         const lastResetRef = ref(db, 'lastResetTimestamp');
         const snapshot = await get(lastResetRef);
@@ -77,49 +127,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error("Failed during app initialization check:", error);
+      } finally {
+        attachListeners();
       }
-
-      // Attach listeners after the check is complete
-      const taxisRef = ref(db, 'taxis');
-      const taxisUnsubscribe = onValue(taxisRef, (snapshot) => {
-        const data = snapshot.val();
-        const taxisArray: Taxi[] = data ? Object.keys(data).map(key => {
-          const taxiData = data[key];
-          return {
-            id: key,
-            ...taxiData,
-            bookings: taxiData.bookings ? Object.keys(taxiData.bookings).map(bookingKey => ({
-              id: bookingKey,
-              ...taxiData.bookings[bookingKey]
-            })) : [],
-          };
-        }) : [];
-        setTaxis(taxisArray);
-      });
-  
-      const remainingEmployeesRef = ref(db, 'remainingEmployees');
-      const employeesUnsubscribe = onValue(remainingEmployeesRef, (snapshot) => {
-          const data = snapshot.val();
-          setRemainingEmployees(data ? Object.values(data) as string[] : []);
-      });
-  
-      const notificationsRef = ref(db, 'notifications');
-      const notificationsUnsubscribe = onValue(notificationsRef, (snapshot) => {
-          const data = snapshot.val();
-          const notificationsArray: AppNotification[] = data ? Object.keys(data).map(key => ({
-              id: key,
-              ...data[key]
-          })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
-          setNotifications(notificationsArray);
-      });
-
-      setIsLoading(false);
-
-      return () => {
-        taxisUnsubscribe();
-        employeesUnsubscribe();
-        notificationsUnsubscribe();
-      };
     };
 
     initializeApp();
@@ -234,7 +244,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     await set(newBookingRef, newBooking);
     
-    const updatedBookedSeats = taxi.bookedSeats + 1;
+    const updatedBookedSeats = (taxi.bookedSeats || 0) + 1;
     await update(taxiRef, { bookedSeats: updatedBookedSeats });
 
     if (updatedBookedSeats === taxi.capacity) {
