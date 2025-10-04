@@ -282,7 +282,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const remainingEmployeesRef = ref(db, 'remainingEmployees');
         const newEmployeeRef = push(remainingEmployeesRef);
         await set(newEmployeeRef, currentEmployeeId);
-        await addNotification("A new employee was added to the waiting list.", true);
+        await addNotification(`An employee (${currentEmployeeId}) was added to the waiting list.`, true);
         toast({ title: "Taxi Full", description: "This taxi is full. You have been added to the waiting list." });
         return;
     }
@@ -299,6 +299,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
     const updatedBookedSeats = (taxi.bookedSeats || 0) + 1;
     await update(taxiRef, { bookedSeats: updatedBookedSeats });
+
+    await addNotification(`${currentEmployeeId} has booked a seat in "${taxi.name}".`);
 
     if (updatedBookedSeats === taxi.capacity) {
         await addNotification(`The taxi "${taxi.name}" is now full.`, true);
@@ -353,3 +355,5 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
+
+    
