@@ -1,8 +1,8 @@
 // sendTestNotification.js
-import admin from "firebase-admin";
-import { initializeApp, getApps } from "firebase-admin/app";
-import { getDatabase } from "firebase-admin/database";
-import fs from 'fs';
+const admin = require("firebase-admin");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { getDatabase } = require("firebase-admin/database");
+const fs = require('fs');
 
 // 1. Initialize with your service account JSON (download from Firebase Console → Project Settings → Service Accounts)
 // Make sure to rename your downloaded key to 'ServiceAccountKey.json' and place it in the root directory.
@@ -11,7 +11,7 @@ let serviceAccount;
 try {
     const serviceAccountString = fs.readFileSync(serviceAccountPath, 'utf8');
     serviceAccount = JSON.parse(serviceAccountString);
-    
+
     // THE FIX: The private key from some sources has literal '\\n' instead of newlines.
     // We will programmatically replace them with actual newlines.
     if (serviceAccount.private_key) {
