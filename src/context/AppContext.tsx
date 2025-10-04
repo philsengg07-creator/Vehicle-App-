@@ -18,7 +18,6 @@ async function resetData() {
       for (const taxiId in taxis) {
         updates[`/taxis/${taxiId}/bookedSeats`] = 0;
         updates[`/taxis/${taxiId}/bookings`] = null;
-        updates[`/taxis/${taxiId}/bookingDeadline`] = null;
       }
     }
 
