@@ -90,8 +90,13 @@ export async function sendNotification(title: string, body: string) {
     
     return { success: true, message: "Notification sent" };
     
-  } catch (err: any) {
+  } catch (err: any)
+   {
     console.error("Send notification error:", err);
+    // Add this check to log the specific JWT error if it occurs
+    if (err.code === 'app/invalid-credential' || (err.message && err.message.includes('Invalid JWT Signature'))) {
+        console.error("Authentication failed: The service account key is likely misconfigured. Please check your environment variables.");
+    }
     return { success: false, error: err.message };
   }
 }

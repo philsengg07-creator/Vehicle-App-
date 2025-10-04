@@ -1,13 +1,11 @@
 
 // public/firebase-messaging-sw.js
 
-// Give the service worker access to Firebase Messaging.
-// Note that you can only use Firebase Messaging here, other Firebase libraries
-// are not available in the service worker.
+// Scripts for firebase and firebase messaging
 importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js');
 
-// Initialize the Firebase app in the service worker with the same config
+// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyAdJXY7HLBRqWzur4JH3FNuVOCe_ItTyOk",
   authDomain: "studio-6451719734-ee0cd.firebaseapp.com",
@@ -18,22 +16,22 @@ const firebaseConfig = {
   databaseURL: "https://studio-6451719734-ee0cd-default-rtdb.asia-southeast1.firebasedatabase.app/"
 };
 
-firebase.initializeApp(firebaseConfig);
-
-// Retrieve an instance of Firebase Messaging so that it can handle background messages.
+// Initialize Firebase
+const app = firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
+// Background message handler
 messaging.onBackgroundMessage((payload) => {
-  console.log(
-    '[firebase-messaging-sw.js] Received background message ',
-    payload
-  );
-  
-  // Customize the notification here
+  console.log('[firebase-messaging-sw.js] Received background message ', payload);
+
+  if (!payload.notification) {
+    return;
+  }
+
   const notificationTitle = payload.notification.title;
   const notificationOptions = {
     body: payload.notification.body,
-    icon: '/favicon.ico' // You can add a default icon here
+    icon: '/favicon.ico' 
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);

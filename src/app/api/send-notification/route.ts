@@ -21,6 +21,12 @@ function getFirebaseAdmin(): App {
         }
         
         const serviceAccount = JSON.parse(serviceAccountEnv);
+
+        // THE FIX: The private key from some sources has literal '\\n' instead of newlines.
+        // We will programmatically replace them with actual newlines.
+        if (serviceAccount.private_key) {
+            serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+        }
         
         return initializeApp({
             credential: cert(serviceAccount),
@@ -59,7 +65,7 @@ export async function POST(request: Request) {
     };
 
     const messaging = getMessaging(app);
-    const response = await messaging.sendToDevice(token, message);
+    const response = await messaging.sendToDevice([token], message);
 
      if (response.failureCount > 0) {
         const error = response.results[0].error;
