@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'FleetNav',
-  description: 'A mobile app for taxi management.',
+  title: 'Vahicle App',
+  description: 'A mobile app for vehicle management.',
 };
 
 export default function RootLayout({

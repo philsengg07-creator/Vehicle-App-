@@ -14,7 +14,7 @@ export function Header() {
           <div className="bg-primary text-primary-foreground p-2 rounded-lg">
             <Car className="h-6 w-6" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight font-headline">Taxi Management</h1>
+          <h1 className="text-xl font-bold tracking-tight font-headline">Vahicle App</h1>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
           <RoleSwitcher />

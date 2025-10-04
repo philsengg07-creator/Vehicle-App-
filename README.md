@@ -1,4 +1,4 @@
-# Firebase Studio
+# Vahicle App
 
 This is a NextJS starter in Firebase Studio.
 
