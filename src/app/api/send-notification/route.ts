@@ -4,7 +4,6 @@ import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
 import { getDatabase, ref, get, update } from "firebase-admin/database";
 import { getMessaging } from "firebase-admin/messaging";
 
-let adminApp: App;
 
 function getFirebaseAdmin(): App {
     if (getApps().some(app => app.name === 'adminApp')) {
@@ -33,11 +32,10 @@ function getFirebaseAdmin(): App {
             }
         }
         
-        adminApp = initializeApp({
+        return initializeApp({
             credential: cert(serviceAccount),
             databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || "https://studio-6451719734-ee0cd-default-rtdb.asia-southeast1.firebasedatabase.app"
         }, 'adminApp');
-        return adminApp;
 
     } catch (e: any) {
         console.error("Could not initialize Firebase Admin SDK in sendNotification API.", e.message);
