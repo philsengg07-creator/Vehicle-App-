@@ -8,9 +8,11 @@ import { getMessaging } from "firebase-admin/messaging";
 // Function to safely initialize and get the Firebase Admin app
 function getFirebaseAdmin(): App {
     const apps = getApps();
-    const adminApp = apps.find(app => app.name === 'adminApp');
-    if (adminApp) {
+    if (apps.length > 0) {
+      const adminApp = apps.find(app => app.name === 'adminApp');
+      if (adminApp) {
         return adminApp;
+      }
     }
 
     try {
@@ -22,6 +24,12 @@ function getFirebaseAdmin(): App {
         }
         
         const serviceAccount = JSON.parse(serviceAccountEnv);
+
+        // THE FIX: The private key from some sources has literal '\\n' instead of newlines.
+        // We will programmatically replace them with actual newlines.
+        if (serviceAccount.private_key) {
+            serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+        }
         
         return initializeApp({
             credential: cert(serviceAccount),
@@ -61,7 +69,7 @@ export async function sendNotification(title: string, body: string) {
     };
 
     const messaging = getMessaging(app);
-    const response = await messaging.sendToDevice(token, message);
+    const response = await messaging.sendToDevice([token], message);
     
     console.log('Successfully sent message:', response);
 
@@ -87,4 +95,3 @@ export async function sendNotification(title: string, body: string) {
     return { success: false, error: err.message };
   }
 }
-
