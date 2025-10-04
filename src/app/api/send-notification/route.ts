@@ -13,11 +13,11 @@ function getFirebaseAdmin(): App {
     }
 
     try {
-        const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+        const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
         const databaseURL = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || "https://studio-6451719734-ee0cd-default-rtdb.asia-southeast1.firebasedatabase.app/";
 
         if (!serviceAccountEnv) {
-             throw new Error("Could not initialize Firebase Admin SDK: Service account key not found. Please set FIREBASE_SERVICE_ACCOUNT_KEY or GOOGLE_APPLICATION_CREDENTIALS_JSON environment variables.");
+             throw new Error("Could not initialize Firebase Admin SDK: Service account key not found. Please set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.");
         }
         
         const serviceAccount = JSON.parse(serviceAccountEnv);
