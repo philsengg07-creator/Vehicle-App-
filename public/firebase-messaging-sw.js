@@ -1,7 +1,13 @@
-// Import and initialize the Firebase SDK
+
+// public/firebase-messaging-sw.js
+
+// Give the service worker access to Firebase Messaging.
+// Note that you can only use Firebase Messaging here, other Firebase libraries
+// are not available in the service worker.
 importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js');
 
+// Initialize the Firebase app in the service worker with the same config
 const firebaseConfig = {
   apiKey: "AIzaSyAdJXY7HLBRqWzur4JH3FNuVOCe_ItTyOk",
   authDomain: "studio-6451719734-ee0cd.firebaseapp.com",
@@ -14,16 +20,20 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
+// Retrieve an instance of Firebase Messaging so that it can handle background messages.
 const messaging = firebase.messaging();
 
-// Handle background messages
 messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload);
-
+  console.log(
+    '[firebase-messaging-sw.js] Received background message ',
+    payload
+  );
+  
+  // Customize the notification here
   const notificationTitle = payload.notification.title;
   const notificationOptions = {
     body: payload.notification.body,
-    icon: '/firebase-logo.png' // Optional: Add an icon
+    icon: '/favicon.ico' // You can add a default icon here
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
