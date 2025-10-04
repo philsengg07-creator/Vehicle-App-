@@ -1,7 +1,6 @@
 
 "use client";
 
-import { useState } from "react";
 import { Users, Edit, Trash2, CheckCircle, Car, Clock } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import type { Taxi } from "@/types";
@@ -32,14 +31,7 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
   const isFull = taxi.bookedSeats >= taxi.capacity;
   const progressValue = (taxi.bookedSeats / taxi.capacity) * 100;
   const isBookedByCurrentUser = taxi.bookings.some(b => b.employeeId === currentEmployeeId);
-  
-  const now = new Date();
-  const deadlineDate = new Date();
-  if (taxi.bookingDeadline) {
-    const [hours, minutes] = taxi.bookingDeadline.split(':').map(Number);
-    deadlineDate.setHours(hours, minutes, 0, 0);
-  }
-  const bookingDeadlinePassed = taxi.bookingDeadline ? now > deadlineDate : false;
+  const isBookingClosed = taxi.status === 'closed';
 
   const handleDeleteClick = () => {
     deleteTaxi(taxi.id);
@@ -57,7 +49,7 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
             <CardTitle className="font-headline text-xl">{taxi.name}</CardTitle>
             <div className="flex flex-col items-end gap-2">
               {isFull && <Badge variant="destructive" className="shadow-lg">Full</Badge>}
-              {bookingDeadlinePassed && !isFull && <Badge variant="secondary" className="shadow-lg">Booking Closed</Badge>}
+              {isBookingClosed && !isFull && <Badge variant="secondary" className="shadow-lg">Booking Closed</Badge>}
             </div>
           </CardHeader>
           <CardContent className="flex-grow">
@@ -108,7 +100,7 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
         <CardTitle className="font-headline text-xl">{taxi.name}</CardTitle>
         <div className="flex flex-col items-end gap-2">
             {isFull && <Badge variant="destructive" className="shadow-lg">Full</Badge>}
-            {bookingDeadlinePassed && !isFull && <Badge variant="secondary" className="shadow-lg">Booking Closed</Badge>}
+            {isBookingClosed && !isFull && <Badge variant="secondary" className="shadow-lg">Booking Closed</Badge>}
         </div>
       </CardHeader>
       <CardContent className="flex-grow">
@@ -118,7 +110,7 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
                     <Users className="h-4 w-4" />
                     <span>Capacity</span>
                 </div>
-                {role === 'admin' || isFull || bookingDeadlinePassed ? (
+                {role === 'admin' || isFull || isBookingClosed ? (
                   <span className="font-medium text-foreground">{taxi.bookedSeats} / {taxi.capacity}</span>
                 ) : null }
             </div>
@@ -171,7 +163,7 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
         ) : (
           <Button
             onClick={handleBookClick}
-            disabled={isBookedByCurrentUser || bookingDeadlinePassed}
+            disabled={isBookedByCurrentUser || isBookingClosed}
             className="w-full transition-all"
             variant={isBookedByCurrentUser ? "secondary" : "default"}
           >
@@ -180,7 +172,7 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
                 <CheckCircle className="mr-2 h-4 w-4" />
                 Booked
               </>
-            ) : bookingDeadlinePassed ? (
+            ) : isBookingClosed ? (
               <>
                   <Clock className="mr-2 h-4 w-4"/>
                   Booking Closed

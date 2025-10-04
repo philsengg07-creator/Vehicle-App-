@@ -19,6 +19,7 @@ async function resetData() {
       for (const taxiId in taxis) {
         updates[`/taxis/${taxiId}/bookedSeats`] = 0;
         updates[`/taxis/${taxiId}/bookings`] = null;
+        updates[`/taxis/${taxiId}/status`] = 'open';
       }
     }
 
@@ -42,7 +43,7 @@ export interface AppContextType {
   setEmployee: (name: string) => void;
   logout: () => void;
   taxis: Taxi[];
-  addTaxi: (taxi: Omit<Taxi, 'id' | 'bookedSeats' | 'bookings'>) => void;
+  addTaxi: (taxi: Omit<Taxi, 'id' | 'bookedSeats' | 'bookings' | 'status'>) => void;
   editTaxi: (taxiId: string, data: Partial<Omit<Taxi, 'id' | 'bookedSeats' | 'bookings'>>) => void;
   deleteTaxi: (taxiId: string) => void;
   bookSeat: (taxiId: string) => void;
@@ -136,6 +137,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     initializeApp();
 
   }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      const updates: { [key: string]: any } = {};
+
+      taxis.forEach(taxi => {
+        if (taxi.status === 'open' && taxi.bookingDeadline) {
+          const [hours, minutes] = taxi.bookingDeadline.split(':').map(Number);
+          const deadlineDate = new Date();
+          deadlineDate.setHours(hours, minutes, 0, 0);
+
+          if (now > deadlineDate) {
+            updates[`/taxis/${taxi.id}/status`] = 'closed';
+          }
+        }
+      });
+
+      if (Object.keys(updates).length > 0) {
+        update(ref(db), updates);
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [taxis]);
   
 
   const switchRole = useCallback((newRole: UserRole) => setRole(newRole), []);
@@ -150,13 +176,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCurrentEmployeeId(null);
   }, []);
 
-  const addTaxi = (taxiData: Omit<Taxi, 'id' | 'bookedSeats' | 'bookings'>) => {
+  const addTaxi = (taxiData: Omit<Taxi, 'id' | 'bookedSeats' | 'bookings' | 'status'>) => {
     const taxisRef = ref(db, 'taxis');
     const newTaxiRef = push(taxisRef);
     const newTaxi = {
         ...taxiData,
         bookedSeats: 0,
         bookings: {},
+        status: 'open' as const,
     };
     set(newTaxiRef, newTaxi);
     toast({ title: "Success", description: `Taxi "${taxiData.name}" added.` });
@@ -206,6 +233,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     
     const taxi = { id: taxiId, ...taxiSnapshot.val() };
+    
+    if (taxi.status === 'closed') {
+        toast({
+            variant: "destructive",
+            title: "Booking Closed",
+            description: `The booking deadline for ${taxi.name} has passed.`,
+        });
+        return;
+    }
 
     if (taxi.bookingDeadline) {
         const now = new Date();
@@ -214,6 +250,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         deadlineDate.setHours(hours, minutes, 0, 0);
 
         if (now > deadlineDate) {
+            update(taxiRef, { status: 'closed' });
             toast({
                 variant: "destructive",
                 title: "Booking Closed",

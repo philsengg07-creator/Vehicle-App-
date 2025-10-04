@@ -7,6 +7,7 @@ export interface Taxi {
   bookedSeats: number;
   bookings: Booking[];
   bookingDeadline?: string; // e.g., "17:00"
+  status: 'open' | 'closed';
 }
 
 export interface Booking {
