@@ -12,6 +12,7 @@ import type { Taxi } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import Pushy from 'pushy-sdk-web';
 import { sendPushyNotification } from "@/app/actions/sendPushyNotification";
+import { registerAdminDevice } from "@/app/actions/registerAdminDevice";
 
 
 export function AdminDashboard() {
@@ -43,46 +44,54 @@ export function AdminDashboard() {
   const handleEnableNotifications = async () => {
     setIsEnabling(true);
     try {
-      if (!Pushy.isRegistered()) {
-        const token = await Pushy.register({ appId: '668f7633e7e891392b67f185' });
-        console.log('Pushy device token:', token);
-        
-        // Subscribe the user to a topic
-        await Pushy.subscribe('admin');
-        console.log('Subscribed to admin topic');
+        // Grant permission if not already granted
+        if (!Pushy.isRegistered()) {
+            const token = await Pushy.register({ appId: '668f7633e7e891392b67f185' });
+            console.log('Pushy device token:', token);
+            
+            // Store the token on the backend
+            await registerAdminDevice(token);
 
-        // Send a test notification to the topic
-        await sendPushyNotification({
-          to: '/topics/admin',
-          data: { message: "You will now receive admin alerts on this device." },
-          notification: {
-            title: "Notifications Enabled",
-            body: "You will now receive admin alerts on this device.",
-          },
-        });
+            // Subscribe the user to the admin topic
+            await Pushy.subscribe('admin');
+            console.log('Subscribed to admin topic');
 
-        toast({
-          title: "Push Notifications Enabled",
-          description: "You are now subscribed to admin alerts. A test notification has been sent.",
-        });
+            // Send a test notification to the topic to confirm setup
+            await sendPushyNotification({
+                to: '/topics/admin',
+                data: { message: "You will now receive admin alerts on this device." },
+                notification: {
+                    title: "Notifications Enabled",
+                    body: "You will now receive admin alerts on this device.",
+                },
+            });
 
-      } else {
-        // Even if already registered, ensure subscription is active
-        await Pushy.subscribe('admin');
-        toast({
-          title: "Already Enabled",
-          description: "Push notifications are already enabled and you are subscribed to admin alerts.",
-        });
-      }
+            toast({
+                title: "Push Notifications Enabled",
+                description: "You are now subscribed to admin alerts. A test notification has been sent.",
+            });
+        } else {
+            // If already registered, we can still ensure the subscription is active
+            // and the token is in our database.
+            const token = Pushy.getToken();
+            if(token) {
+              await registerAdminDevice(token);
+            }
+            await Pushy.subscribe('admin');
+            toast({
+                title: "Notifications Re-synced",
+                description: "Push notifications are active and you are subscribed to admin alerts.",
+            });
+        }
     } catch (error: any) {
-      console.error('An error occurred while enabling notifications.', error);
-      toast({
-        variant: "destructive",
-        title: "Notification Setup Failed",
-        description: error.message || "An unexpected error occurred.",
-      });
+        console.error('An error occurred while enabling notifications.', error);
+        toast({
+            variant: "destructive",
+            title: "Notification Setup Failed",
+            description: error.message || "An unexpected error occurred.",
+        });
     } finally {
-      setIsEnabling(false);
+        setIsEnabling(false);
     }
   };
 

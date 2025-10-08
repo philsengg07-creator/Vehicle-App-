@@ -1,85 +1,82 @@
-
 // sendTestNotification.js
-const admin = require("firebase-admin");
-const { initializeApp, getApps } = require("firebase-admin/app");
-const { getDatabase } = require("firebase-admin/database");
-const fs = require('fs');
+// A simple script to send a direct test notification to a specific device token.
+// Usage: node sendTestNotification.js <YOUR_DEVICE_TOKEN>
 
-// 1. Initialize with your service account JSON (download from Firebase Console → Project Settings → Service Accounts)
-// Make sure to rename your downloaded key to 'ServiceAccountKey.json' and place it in the root directory.
-const serviceAccountPath = './ServiceAccountKey.json';
-let serviceAccount;
-try {
-    const serviceAccountString = fs.readFileSync(serviceAccountPath, 'utf8');
-    serviceAccount = JSON.parse(serviceAccountString);
+const https = require('https');
 
-    // THE FIX: The private key from some sources has literal '\\n' instead of newlines.
-    // We will programmatically replace them with actual newlines.
-    if (serviceAccount.private_key) {
-        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
-    }
+// 1. Get the Secret API Key from your environment variables.
+// You can also hardcode it here for quick testing, but this is not recommended for production.
+const secretApiKey = process.env.PUSHY_API_KEY || 'YOUR_PUSHY_SECRET_API_KEY';
 
-} catch (e) {
-    console.error("❌ Could not read or parse 'ServiceAccountKey.json'. Please make sure the file exists and you have pasted your new service account key into it.", e);
+// 2. Get the device token from command-line arguments.
+const deviceToken = process.argv[2];
+
+if (!deviceToken) {
+    console.error('❌ Usage: node sendTestNotification.js <DEVICE_TOKEN>');
     process.exit(1);
 }
 
+if (!secretApiKey || secretApiKey === 'YOUR_PUSHY_SECRET_API_KEY') {
+    console.error('❌ Pushy Secret API Key is not set. Please set the PUSHY_API_KEY environment variable or edit this script.');
+    process.exit(1);
+}
 
-if (!getApps().length) {
-    initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        databaseURL: process.env.FIREBASE_DATABASE_URL || "https://studio-6451719734-ee0cd-default-rtdb.asia-southeast1.firebasedatabase.app/"
+console.log(`\n📲 Attempting to send a test notification to token: ${deviceToken}`);
+
+// 3. Define the push notification payload.
+const payload = {
+    to: deviceToken,
+    data: {
+        title: 'Direct Token Test',
+        message: 'If you see this, sending to a specific token is working! 🎉'
+    },
+    notification: {
+        title: 'Direct Token Test',
+        body: 'If you see this, sending to a specific token is working! 🎉',
+        badge: 1,
+        sound: 'ping.aiff'
+    }
+};
+
+const postData = JSON.stringify(payload);
+
+const options = {
+    hostname: 'api.pushy.me',
+    port: 443,
+    path: `/push?api_key=${secretApiKey}`,
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
+    }
+};
+
+const req = https.request(options, (res) => {
+    let responseBody = '';
+
+    res.on('data', (chunk) => {
+        responseBody += chunk;
     });
-}
 
-const db = getDatabase();
-
-async function sendTestNotification() {
-  try {
-    // 2. Hardcode the device token for testing
-    const token = "fpPfGdGC4F9ZvZG0XG9x8E:APA91bG5KZ66bpshkCTjGScRmPd5GtVN7WxE8v-gKbWMiqgTO4eZ8HdMjlvYtUI0PvGxe4-SNixp4OnQAGzQnoB_NdIQF7SLZonCjNaGs4zONIYhbr_j4YY";
-
-    if (!token) {
-      console.error("❌ Hardcoded token is missing.");
-      process.exit(1);
-    }
-
-    console.log("✅ Using hardcoded token:", token);
-
-    // 3. Build a sample notification payload
-    const payload = {
-      notification: {
-        title: "Direct Token Test",
-        body: "If you see this, sending to a specific token is working 🎉"
-      }
-    };
-
-    // 4. Send to FCM
-    const response = await admin.messaging().send(
-        {
-            token: token,
-            notification: payload.notification
+    res.on('end', () => {
+        console.log('📬 Pushy API Response:', responseBody);
+        try {
+            const jsonResponse = JSON.parse(responseBody);
+            if (jsonResponse.success) {
+                console.log('\n✅ Notification sent successfully to Pushy. If you didn\'t see it, check the device token and client-side setup.');
+            } else {
+                console.error(`\n❌ Pushy reported an error: ${jsonResponse.error}`);
+            }
+        } catch (e) {
+            console.error('\n🔥 Failed to parse Pushy API response.');
         }
-    );
-    console.log("📩 Send response:", response);
+    });
+});
 
-    if (response) {
-        console.log("\n✅ Notification sent successfully to FCM. If you didn't see it on your device, the problem is on the client-side (service worker) or the token is invalid/expired.");
-    }
+req.on('error', (e) => {
+    console.error(`\n🔥 Problem with request: ${e.message}`);
+});
 
-  } catch (err) {
-    console.error("🔥 Error sending notification:", err);
-    if (err.code === 'messaging/registration-token-not-registered') {
-        console.error("\n❗️ The token is invalid or expired. The device cannot receive the notification.");
-    } else if (err.code === 'messaging/invalid-argument') {
-        console.error("\n❗️ The hardcoded token is not a valid FCM registration token. It may be corrupted or partially copied.");
-    }
-    else {
-        console.error("\n❌ The notification failed to send from the server. The problem is on the server-side, likely with permissions or Firebase plan limitations.");
-    }
-  } finally {
-    process.exit(0);
-  }
-}
-
-sendTestNotification();
+// Write data to request body
+req.write(postData);
+req.end();
