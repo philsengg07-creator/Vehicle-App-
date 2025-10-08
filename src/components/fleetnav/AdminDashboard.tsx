@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -46,18 +47,21 @@ export function AdminDashboard() {
     try {
         // Grant permission if not already granted
         if (!Pushy.isRegistered()) {
-            const token = await Pushy.register({ appId: '668f7633e7e891392b67f185' });
+            const token = await Pushy.register({ appId: '6696d5e75141b712a23e53b9' });
             console.log('Pushy device token:', token);
             
             // Store the token on the backend
-            await registerAdminDevice(token);
+            const regResult = await registerAdminDevice(token);
+            if (!regResult.success) {
+              throw new Error(regResult.error || 'Failed to register device on backend.');
+            }
 
             // Subscribe the user to the admin topic
             await Pushy.subscribe('admin');
             console.log('Subscribed to admin topic');
 
             // Send a test notification to the topic to confirm setup
-            await sendPushyNotification({
+            const pushResult = await sendPushyNotification({
                 to: '/topics/admin',
                 data: { message: "You will now receive admin alerts on this device." },
                 notification: {
@@ -65,6 +69,10 @@ export function AdminDashboard() {
                     body: "You will now receive admin alerts on this device.",
                 },
             });
+
+            if(!pushResult.success) {
+               throw new Error(pushResult.error || 'Failed to send confirmation notification.');
+            }
 
             toast({
                 title: "Push Notifications Enabled",
