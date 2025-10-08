@@ -37,7 +37,7 @@ const db = getDatabase();
 async function sendTestNotification() {
   try {
     // 2. Hardcode the device token for testing
-    const token = "fpPfGdGC4F9ZvZG0XG9x8E:APA91bH_sIzLJYeizPSHVxcqvjaZLxGu91YTvv0PsJevtbsxJu1tqp-Int0yWUUD2fxAUZiXLIAg_JelMluUydToG3Zy5SM2Jp5Lud2bhjzfJ8j-rdLr9SI";
+    const token = "fpPfGdGC4F9ZvZG0XG9x8E:APA91bG5KZ66bpshkCTjGScRmPd5GtVN7WxE8v-gKbWMiqgTO4eZ8HdMjlvYtUI0PvGxe4-SNixp4OnQAGzQnoB_NdIQF7SLZonCjNaGs4zONIYhbr_j4YY";
 
     if (!token) {
       console.error("❌ Hardcoded token is missing.");
