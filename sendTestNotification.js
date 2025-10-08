@@ -3,10 +3,10 @@
 // Usage: node sendTestNotification.js <YOUR_DEVICE_TOKEN>
 
 const https = require('https');
+require('dotenv').config();
 
 // 1. Get the Secret API Key from your environment variables.
-// You can also hardcode it here for quick testing, but this is not recommended for production.
-const secretApiKey = process.env.PUSHY_API_KEY || 'YOUR_PUSHY_SECRET_API_KEY';
+const secretApiKey = process.env.PUSHY_API_KEY;
 
 // 2. Get the device token from command-line arguments.
 const deviceToken = process.argv[2];
@@ -16,8 +16,8 @@ if (!deviceToken) {
     process.exit(1);
 }
 
-if (!secretApiKey || secretApiKey === 'YOUR_PUSHY_SECRET_API_KEY') {
-    console.error('❌ Pushy Secret API Key is not set. Please set the PUSHY_API_KEY environment variable or edit this script.');
+if (!secretApiKey) {
+    console.error('❌ Pushy Secret API Key is not set. Please set the PUSHY_API_KEY environment variable.');
     process.exit(1);
 }
 
