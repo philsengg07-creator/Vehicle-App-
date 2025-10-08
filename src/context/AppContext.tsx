@@ -271,7 +271,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
         if (shouldPush) {
           try {
-            await sendPushNotification('Taxi Alert', message);
+            await sendPushNotification('Taxi Management Alert', message);
           } catch (error) {
             console.error("Failed to send push notification:", error);
           }
