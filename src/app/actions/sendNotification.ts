@@ -2,7 +2,7 @@
 'use server';
 
 import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
-import { getDatabase, ref, get, remove } from "firebase-admin/database";
+import { getDatabase } from "firebase-admin/database";
 import { getMessaging } from "firebase-admin/messaging";
 
 // Function to safely initialize and get the Firebase Admin app
@@ -25,8 +25,6 @@ function getFirebaseAdmin(): App {
         
         const serviceAccount = JSON.parse(serviceAccountEnv);
 
-        // THE FIX: The private key from some sources has literal '\\n' instead of newlines.
-        // We will programmatically replace them with actual newlines.
         if (serviceAccount.private_key) {
             serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
         }
@@ -46,8 +44,8 @@ export async function sendNotification(title: string, body: string) {
   try {
     const app = getFirebaseAdmin();
     const db = getDatabase(app);
-    const tokenRef = ref(db, "adminDeviceToken");
-    const snapshot = await get(tokenRef);
+    const tokenRef = db.ref("adminDeviceToken");
+    const snapshot = await tokenRef.once("value");
 
     if (!snapshot.exists()) {
       console.log('No admin device token found. Cannot send notification.');
@@ -82,10 +80,9 @@ export async function sendNotification(title: string, body: string) {
      if (err.code === 'messaging/registration-token-not-registered') {
         console.log("Token is not registered, removing from database.");
         const db = getDatabase(getFirebaseAdmin());
-        const tokenRef = ref(db, "adminDeviceToken");
-        await remove(tokenRef);
+        const tokenRef = db.ref("adminDeviceToken");
+        await tokenRef.remove();
     }
-    // Add this check to log the specific JWT error if it occurs
     if (err.code === 'app/invalid-credential' || (err.message && err.message.includes('Invalid JWT Signature'))) {
         console.error("Authentication failed: The service account key is likely misconfigured. Please check your environment variables.");
     }
