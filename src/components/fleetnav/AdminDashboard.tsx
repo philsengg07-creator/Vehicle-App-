@@ -11,10 +11,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Taxi } from "@/types";
 import { useToast } from '@/hooks/use-toast';
-import { getMessaging, getToken } from "firebase/messaging";
 import { set, ref } from "firebase/database";
-import { app, db, VAPID_KEY } from "@/lib/firebase";
-import { sendNotification } from "@/app/actions/sendNotification";
+import { db } from "@/lib/firebase";
+import Pushy from 'pushy-sdk-web';
+import { sendPushyNotification } from "@/app/actions/sendPushyNotification";
+
 
 export function AdminDashboard() {
   const { taxis, remainingEmployees, addTaxi, editTaxi } = useApp();
@@ -45,30 +46,32 @@ export function AdminDashboard() {
   const handleEnableNotifications = async () => {
     setIsEnabling(true);
     try {
-      const messaging = getMessaging(app);
-      const permission = await Notification.requestPermission();
+      if (!Pushy.isRegistered()) {
+        const token = await Pushy.register({ appId: '668f7633e7e891392b67f185' });
+        
+        const tokenRef = ref(db, 'adminDeviceToken');
+        await set(tokenRef, token);
+        console.log('Pushy device token:', token);
+        
+        await sendPushyNotification({
+          to: token,
+          data: { message: "You will now receive alerts on this device." },
+          notification: {
+            title: "Notifications Enabled",
+            body: "You will now receive alerts on this device.",
+          },
+        });
 
-      if (permission === 'granted') {
-        const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY });
-        if (currentToken) {
-          // Overwrite the token at the single path
-          const tokenRef = ref(db, 'adminDeviceToken');
-          await set(tokenRef, currentToken);
-          
-          console.log('Admin device token saved:', currentToken);
-          
-          await sendNotification("Notifications Enabled", "You will now receive alerts on this device.");
+        toast({
+          title: "Push Notifications Enabled",
+          description: "A test notification has been sent to this device.",
+        });
 
-          toast({
-            title: "Push Notifications Enabled",
-            description: "A test notification has been sent to this device.",
-          });
-
-        } else {
-          throw new Error("Could not get push token. Please check your browser settings.");
-        }
       } else {
-        throw new Error("Permission denied. You have not granted permission for notifications.");
+        toast({
+          title: "Already Enabled",
+          description: "Push notifications are already enabled on this device.",
+        });
       }
     } catch (error: any) {
       console.error('An error occurred while enabling notifications.', error);

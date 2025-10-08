@@ -6,7 +6,7 @@ import type { UserRole, Taxi, Booking, AppNotification } from '@/types';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/lib/firebase';
 import { ref, onValue, set, remove, push, get, update } from 'firebase/database';
-import { sendNotification as sendPushNotification } from '@/app/actions/sendNotification';
+import { sendPushyNotification } from '@/app/actions/sendPushyNotification';
 
 async function resetData() {
   try {
@@ -206,6 +206,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
     toast({ title: "Success", description: `Taxi "${taxiName}" deleted.` });
   };
 
+  const addNotification = async (message: string, shouldPush: boolean = false) => {
+      const notificationsRef = ref(db, 'notifications');
+      const newNotificationRef = push(notificationsRef);
+      const newNotification = {
+        message,
+        date: new Date().toISOString(),
+        read: false,
+      };
+      await set(newNotificationRef, newNotification);
+  
+      if (shouldPush) {
+        try {
+          const tokenRef = ref(db, 'adminDeviceToken');
+          const snapshot = await get(tokenRef);
+          if (snapshot.exists()) {
+            const token = snapshot.val();
+            await sendPushyNotification({
+              to: token,
+              data: { message },
+              notification: { title: 'Vahicle App Alert', body: message }
+            });
+          }
+        } catch (error) {
+          console.error("Failed to send push notification:", error);
+        }
+      }
+  };
+
   const bookSeat = async (taxiId: string) => {
     if (!currentEmployeeId) {
         toast({ variant: "destructive", title: "Error", description: "Employee not set." });
@@ -259,25 +287,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
     }
     
-    const addNotification = async (message: string, shouldPush: boolean = false) => {
-        const notificationsRef = ref(db, 'notifications');
-        const newNotificationRef = push(notificationsRef);
-        const newNotification = {
-          message,
-          date: new Date().toISOString(),
-          read: false,
-        };
-        await set(newNotificationRef, newNotification);
-    
-        if (shouldPush) {
-          try {
-            await sendPushNotification('Taxi Management Alert', message);
-          } catch (error) {
-            console.error("Failed to send push notification:", error);
-          }
-        }
-    };
-
     if (taxi.bookedSeats >= taxi.capacity) {
         const remainingEmployeesRef = ref(db, 'remainingEmployees');
         const newEmployeeRef = push(remainingEmployeesRef);

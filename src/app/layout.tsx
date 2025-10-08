@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 export const metadata: Metadata = {
   title: 'Vahicle App',
   description: 'A mobile app for vehicle management.',
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({

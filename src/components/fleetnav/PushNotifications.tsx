@@ -2,33 +2,21 @@
 "use client";
 
 import { useEffect } from 'react';
-import { getMessaging, onMessage } from "firebase/messaging";
-import { app } from "@/lib/firebase";
+import Pushy from 'pushy-sdk-web';
 
 export function PushNotifications() {
-
   useEffect(() => {
-    if (typeof window === 'undefined' || !('Notification' in window)) {
-        return;
-    }
+    // Set up a listener for incoming push notifications
+    Pushy.setNotificationListener((data: any) => {
+      console.log('Received notification: ' + JSON.stringify(data));
 
-    const messaging = getMessaging(app);
-    
-    if (!messaging) {
-        return;
-    }
-
-    const unsubscribe = onMessage(messaging, (payload) => {
-      console.log("📩 Foreground message received:", payload);
-      
-      const { title, body } = payload.notification || {};
-      if (title && body) {
-          // Manually display a browser notification
-          new Notification(title, { body });
-      }
+      let title = data.title || 'Vahicle App';
+      // Display the notification
+      Pushy.notify(title, {
+        body: data.message,
+        icon: data.icon,
+      });
     });
-
-    return () => unsubscribe();
   }, []);
 
   return null;
