@@ -218,16 +218,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
       if (shouldPush) {
         try {
-          const tokenRef = ref(db, 'adminDeviceToken');
-          const snapshot = await get(tokenRef);
-          if (snapshot.exists()) {
-            const token = snapshot.val();
             await sendPushyNotification({
-              to: token,
+              to: '/topics/admin',
               data: { message, title },
               notification: { title: title, body: message }
             });
-          }
         } catch (error) {
           console.error("Failed to send push notification:", error);
         }

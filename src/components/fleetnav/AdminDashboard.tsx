@@ -10,8 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Taxi } from "@/types";
 import { useToast } from '@/hooks/use-toast';
-import { set, ref } from "firebase/database";
-import { db } from "@/lib/firebase";
 import Pushy from 'pushy-sdk-web';
 import { sendPushyNotification } from "@/app/actions/sendPushyNotification";
 
@@ -47,29 +45,33 @@ export function AdminDashboard() {
     try {
       if (!Pushy.isRegistered()) {
         const token = await Pushy.register({ appId: '668f7633e7e891392b67f185' });
-        
-        const tokenRef = ref(db, 'adminDeviceToken');
-        await set(tokenRef, token);
         console.log('Pushy device token:', token);
         
+        // Subscribe the user to a topic
+        await Pushy.subscribe('admin');
+        console.log('Subscribed to admin topic');
+
+        // Send a test notification to the topic
         await sendPushyNotification({
-          to: token,
-          data: { message: "You will now receive alerts on this device." },
+          to: '/topics/admin',
+          data: { message: "You will now receive admin alerts on this device." },
           notification: {
             title: "Notifications Enabled",
-            body: "You will now receive alerts on this device.",
+            body: "You will now receive admin alerts on this device.",
           },
         });
 
         toast({
           title: "Push Notifications Enabled",
-          description: "A test notification has been sent to this device.",
+          description: "You are now subscribed to admin alerts. A test notification has been sent.",
         });
 
       } else {
+        // Even if already registered, ensure subscription is active
+        await Pushy.subscribe('admin');
         toast({
           title: "Already Enabled",
-          description: "Push notifications are already enabled on this device.",
+          description: "Push notifications are already enabled and you are subscribed to admin alerts.",
         });
       }
     } catch (error: any) {
@@ -92,7 +94,7 @@ export function AdminDashboard() {
             <Shield /> Admin Controls
           </CardTitle>
           <CardDescription>
-            Use this control to manage notifications for your devices. Only one device can receive notifications at a time.
+            Enable push notifications to receive real-time alerts for important events like full taxis or new waiting list entries.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-4">
