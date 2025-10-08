@@ -1,7 +1,8 @@
+
 {
     "name": "Vahicle App",
-    "short_name": "Vahicle App",
-    "theme_color": "#8B5CF6",
+    "short_name": "Vahicle",
+    "theme_color": "#5a67d8",
     "background_color": "#ffffff",
     "display": "standalone",
     "scope": "/",

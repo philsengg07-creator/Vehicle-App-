@@ -206,7 +206,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     toast({ title: "Success", description: `Taxi "${taxiName}" deleted.` });
   };
 
-  const addNotification = async (message: string, shouldPush: boolean = false) => {
+  const addNotification = async (message: string, shouldPush: boolean = false, title: string = 'Vahicle App Alert') => {
       const notificationsRef = ref(db, 'notifications');
       const newNotificationRef = push(notificationsRef);
       const newNotification = {
@@ -224,8 +224,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             const token = snapshot.val();
             await sendPushyNotification({
               to: token,
-              data: { message },
-              notification: { title: 'Vahicle App Alert', body: message }
+              data: { message, title },
+              notification: { title: title, body: message }
             });
           }
         } catch (error) {
@@ -291,7 +291,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const remainingEmployeesRef = ref(db, 'remainingEmployees');
         const newEmployeeRef = push(remainingEmployeesRef);
         await set(newEmployeeRef, currentEmployeeId);
-        await addNotification(`An employee (${currentEmployeeId}) was added to the waiting list.`, true);
+        await addNotification(`An employee (${currentEmployeeId}) was added to the waiting list.`, true, "Waiting List Update");
         toast({ title: "Taxi Full", description: "This taxi is full. You have been added to the waiting list." });
         return;
     }
@@ -312,7 +312,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await addNotification(`${currentEmployeeId} has booked a seat in "${taxi.name}".`);
 
     if (updatedBookedSeats === taxi.capacity) {
-        await addNotification(`The taxi "${taxi.name}" is now full.`, true);
+        await addNotification(`The taxi "${taxi.name}" is now full.`, true, "Taxi Full");
     }
     
     toast({ title: "Success!", description: `Your seat in ${taxi.name} is confirmed.` });
