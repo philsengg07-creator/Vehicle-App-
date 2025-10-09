@@ -96,7 +96,7 @@ export function AdminDashboard() {
         toast({
             variant: "destructive",
             title: "Notification Setup Failed",
-            description: error.message || "An unexpected error occurred.",
+            description: error.message || "An unexpected error occurred. Please check console for details.",
         });
     } finally {
         setIsEnabling(false);

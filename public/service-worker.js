@@ -1,8 +1,4 @@
-
-// This file is intentionally blank.
-// Pushy will automatically register its own service worker.
-// This file is just a placeholder to satisfy the manifest and browser requirements.
-self.addEventListener('fetch', function(event) {
-  // This is a no-op fetch handler.
-  // It's required for the service worker to be considered "installable" by some browsers.
-});
+// This service worker file is intentionally left blank.
+// Pushy SDK will automatically register its own service worker.
+// This file is required for the initial scope registration.
+console.log("Vahicle App service worker registration.");
