@@ -6,7 +6,6 @@ import type { UserRole, Taxi, Booking, AppNotification } from '@/types';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/lib/firebase';
 import { ref, onValue, set, remove, push, get, update } from 'firebase/database';
-import { sendPushyNotification } from '@/app/actions/sendPushyNotification';
 
 async function resetData() {
   try {
@@ -117,7 +116,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const lastResetRef = ref(db, 'lastResetTimestamp');
         const snapshot = await get(lastResetRef);
         const lastResetTimestamp = snapshot.val();
-        const now = new Date().getTime();
         const oneDay = 24 * 60 * 60 * 1000;
 
         if (!lastResetTimestamp || (now - new Date(lastResetTimestamp).getTime() > oneDay)) {
@@ -206,7 +204,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     toast({ title: "Success", description: `Taxi "${taxiName}" deleted.` });
   };
 
-  const addNotification = async (message: string, shouldPush: boolean = false, title: string = 'Vahicle App Alert') => {
+  const addNotification = async (message: string) => {
       const notificationsRef = ref(db, 'notifications');
       const newNotificationRef = push(notificationsRef);
       const newNotification = {
@@ -215,18 +213,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         read: false,
       };
       await set(newNotificationRef, newNotification);
-  
-      if (shouldPush) {
-        try {
-            await sendPushyNotification({
-              to: '/topics/admin',
-              data: { message, title },
-              notification: { title: title, body: message }
-            });
-        } catch (error) {
-          console.error("Failed to send push notification:", error);
-        }
-      }
   };
 
   const bookSeat = async (taxiId: string) => {
@@ -286,7 +272,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const remainingEmployeesRef = ref(db, 'remainingEmployees');
         const newEmployeeRef = push(remainingEmployeesRef);
         await set(newEmployeeRef, currentEmployeeId);
-        await addNotification(`An employee (${currentEmployeeId}) was added to the waiting list.`, true, "Waiting List Update");
+        await addNotification(`An employee (${currentEmployeeId}) was added to the waiting list.`);
         toast({ title: "Taxi Full", description: "This taxi is full. You have been added to the waiting list." });
         return;
     }
@@ -307,7 +293,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await addNotification(`${currentEmployeeId} has booked a seat in "${taxi.name}".`);
 
     if (updatedBookedSeats === taxi.capacity) {
-        await addNotification(`The taxi "${taxi.name}" is now full.`, true, "Taxi Full");
+        await addNotification(`The taxi "${taxi.name}" is now full.`);
     }
     
     toast({ title: "Success!", description: `Your seat in ${taxi.name} is confirmed.` });

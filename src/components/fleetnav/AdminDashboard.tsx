@@ -1,26 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Users, Shield, Bell, Loader2 } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import { TaxiCard } from "./TaxiCard";
 import { TaxiForm, type TaxiFormValues } from "./TaxiForm";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Taxi } from "@/types";
-import { useToast } from '@/hooks/use-toast';
-import Pushy from 'pushy-sdk-web';
-import { sendPushyNotification } from "@/app/actions/sendPushyNotification";
-import { registerAdminDevice } from "@/app/actions/registerAdminDevice";
-
 
 export function AdminDashboard() {
   const { taxis, remainingEmployees, addTaxi, editTaxi } = useApp();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTaxi, setEditingTaxi] = useState<Taxi | undefined>(undefined);
-  const { toast } = useToast();
-  const [isEnabling, setIsEnabling] = useState(false);
 
   const handleOpenForm = (taxi?: Taxi) => {
     setEditingTaxi(taxi);
@@ -41,90 +34,8 @@ export function AdminDashboard() {
     handleCloseForm();
   };
 
-  const handleEnableNotifications = async () => {
-    setIsEnabling(true);
-    try {
-        // Grant permission if not already granted
-        if (!Pushy.isRegistered()) {
-            const token = await Pushy.register({ appId: '66a1332732913a0c6a99a775' });
-            console.log('Pushy device token:', token);
-            
-            // Store the token on the backend
-            const regResult = await registerAdminDevice(token);
-            if (!regResult.success) {
-              throw new Error(regResult.error || 'Failed to register device on backend.');
-            }
-
-            // Subscribe the user to the admin topic
-            await Pushy.subscribe('admin');
-            console.log('Subscribed to admin topic');
-
-            // Send a test notification to the topic to confirm setup
-            const pushResult = await sendPushyNotification({
-                to: '/topics/admin',
-                data: { message: "You will now receive admin alerts on this device." },
-                notification: {
-                    title: "Notifications Enabled",
-                    body: "You will now receive admin alerts on this device.",
-                },
-            });
-
-            if(!pushResult.success) {
-               throw new Error(pushResult.error || 'Failed to send confirmation notification.');
-            }
-
-            toast({
-                title: "Push Notifications Enabled",
-                description: "You are now subscribed to admin alerts. A test notification has been sent.",
-            });
-        } else {
-            // If already registered, we can still ensure the subscription is active
-            // and the token is in our database.
-            const token = Pushy.getToken();
-            if(token) {
-              await registerAdminDevice(token);
-            }
-            await Pushy.subscribe('admin');
-            toast({
-                title: "Notifications Re-synced",
-                description: "Push notifications are active and you are subscribed to admin alerts.",
-            });
-        }
-    } catch (error: any) {
-        console.error('An error occurred while enabling notifications.', error);
-        toast({
-            variant: "destructive",
-            title: "Notification Setup Failed",
-            description: error.message || "An unexpected error occurred. Please check console for details.",
-        });
-    } finally {
-        setIsEnabling(false);
-    }
-  };
-
   return (
     <div className="py-8">
-       <Card className="my-8">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield /> Admin Controls
-          </CardTitle>
-          <CardDescription>
-            Enable push notifications to receive real-time alerts for important events like full taxis or new waiting list entries.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col sm:flex-row gap-4">
-          <Button onClick={handleEnableNotifications} disabled={isEnabling} className='w-full sm:w-auto'>
-            {isEnabling ? (
-              <Loader2 className="animate-spin" />
-            ) : (
-              <Bell/>
-            )}
-            Enable Notifications
-          </Button>
-        </CardContent>
-      </Card>
-      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           <div className="flex justify-between items-center mb-6">
