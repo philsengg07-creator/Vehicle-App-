@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -47,7 +46,7 @@ export function AdminDashboard() {
     try {
         // Grant permission if not already granted
         if (!Pushy.isRegistered()) {
-            const token = await Pushy.register({ appId: '6696d5e75141b712a23e53b9' });
+            const token = await Pushy.register({ appId: '66a1332732913a0c6a99a775' });
             console.log('Pushy device token:', token);
             
             // Store the token on the backend
