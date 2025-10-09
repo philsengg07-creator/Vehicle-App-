@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -18,7 +19,8 @@ export function PushNotifications() {
     // Dynamically import Pushy SDK on the client side
     import('pushy-sdk-web')
       .then(PushySDK => {
-        const pushyInstance = new PushySDK.default({ appId: '6696d5e75141b712a23e53b9' });
+        // The Pushy SDK constructor is the module export itself, not a 'default' property.
+        const pushyInstance = new (PushySDK as any)({ appId: '6696d5e75141b712a23e53b9' });
         setPushy(pushyInstance);
         // Check if the device is already registered
         pushyInstance.isRegistered().then((registered) => {
