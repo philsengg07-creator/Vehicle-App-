@@ -6,6 +6,7 @@ import type { UserRole, Taxi, Booking, AppNotification } from '@/types';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/lib/firebase';
 import { ref, onValue, set, remove, push, get, update } from 'firebase/database';
+import { sendPushyNotification } from '@/app/actions/sendPushyNotification';
 
 async function resetData() {
   try {
@@ -116,9 +117,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const lastResetRef = ref(db, 'lastResetTimestamp');
         const snapshot = await get(lastResetRef);
         const lastResetTimestamp = snapshot.val();
+        const now = new Date();
         const oneDay = 24 * 60 * 60 * 1000;
 
-        if (!lastResetTimestamp || (now - new Date(lastResetTimestamp).getTime() > oneDay)) {
+        if (!lastResetTimestamp || (now.getTime() - new Date(lastResetTimestamp).getTime() > oneDay)) {
           console.log("Resetting application data...");
           await resetData();
         } else {
@@ -213,6 +215,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         read: false,
       };
       await set(newNotificationRef, newNotification);
+      await sendPushyNotification(message);
   };
 
   const bookSeat = async (taxiId: string) => {

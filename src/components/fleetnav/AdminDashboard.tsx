@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Taxi } from "@/types";
+import { PushNotifications } from "./PushNotifications";
 
 export function AdminDashboard() {
   const { taxis, remainingEmployees, addTaxi, editTaxi } = useApp();
@@ -60,7 +61,7 @@ export function AdminDashboard() {
           )}
         </div>
         
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-8">
           <Card className="sticky top-20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -82,6 +83,9 @@ export function AdminDashboard() {
               )}
             </CardContent>
           </Card>
+          
+          <PushNotifications />
+
         </div>
 
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
