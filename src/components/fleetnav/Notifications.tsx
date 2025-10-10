@@ -1,108 +1,110 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Bell, Sparkles, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from "@/components/ui/alert-dialog";
-import { useApp } from "@/hooks/use-app";
-import { summarizeNotifications } from "@/ai/flows/summarize-notifications";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { formatDistanceToNow } from "date-fns";
-import { Badge } from "@/components/ui/badge";
+import { useEffect, useState, useMemo } from 'react';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { Bell, Loader2 } from 'lucide-react';
+import { useApp } from '@/hooks/use-app';
+import { ScrollArea } from '../ui/scroll-area';
+import { summarizeNotifications } from '@/ai/flows/summarize-notifications';
+import { Badge } from '../ui/badge';
+import { formatDistanceToNow } from 'date-fns';
 
 export function Notifications() {
   const { notifications, markNotificationsAsRead } = useApp();
-  const [summary, setSummary] = useState("");
-  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
-  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [summary, setSummary] = useState('');
+  const [isSummarizing, setIsSummarizing] = useState(false);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
+
+  useEffect(() => {
+    if (isSheetOpen) {
+      handleSummarize();
+      if (unreadCount > 0) {
+        // Delay marking as read to allow user to see them
+        setTimeout(() => {
+          markNotificationsAsRead();
+        }, 2000);
+      }
+    }
+  }, [isSheetOpen, unreadCount]);
 
   const handleSummarize = async () => {
-    setIsSummaryLoading(true);
-    setSummary("");
+    if (notifications.length === 0) {
+        setSummary('No notifications to summarize.');
+        return;
+    }
+    
+    setIsSummarizing(true);
     try {
       const notificationMessages = notifications.map(n => n.message);
-      if (notificationMessages.length === 0) {
-        setSummary("No notifications to summarize.");
-        setIsSummaryOpen(true);
-        return;
-      }
       const result = await summarizeNotifications({ notifications: notificationMessages });
       setSummary(result.summary);
-      setIsSummaryOpen(true);
     } catch (error) {
-      console.error("Error summarizing notifications:", error);
-      setSummary("Failed to generate summary. Please try again.");
-      setIsSummaryOpen(true);
+      console.error('Error summarizing notifications:', error);
+      setSummary('Could not summarize notifications at this time.');
     } finally {
-      setIsSummaryLoading(false);
-    }
-  };
-
-  const handleOpenChange = (open: boolean) => {
-    if (open && unreadCount > 0) {
-      markNotificationsAsRead();
+      setIsSummarizing(false);
     }
   };
 
   return (
-    <>
-      <Popover onOpenChange={handleOpenChange}>
-        <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            {unreadCount > 0 && (
-              <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 justify-center rounded-full p-0 text-xs">
-                {unreadCount}
-              </Badge>
-            )}
-            <span className="sr-only">Open notifications</span>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent align="end" className="w-80 md:w-96">
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="font-medium">Notifications</h4>
-            <Button variant="outline" size="sm" onClick={handleSummarize} disabled={isSummaryLoading || notifications.length === 0}>
-              {isSummaryLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Sparkles className="mr-2 h-4 w-4" />}
-              Summarize
-            </Button>
-          </div>
-          <ScrollArea className="h-72">
-            <div className="flex flex-col gap-4 pr-4">
-              {notifications.length > 0 ? (
-                notifications.map((notif) => (
-                  <div key={notif.id} className="text-sm">
-                    <p className="font-medium text-foreground">{notif.message}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(notif.date), { addSuffix: true })}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">No new notifications.</p>
-              )}
+    <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon" className="relative">
+          <Bell className="h-5 w-5" />
+          {unreadCount > 0 && (
+            <Badge 
+              variant="destructive" 
+              className="absolute -top-1 -right-1 h-5 w-5 justify-center rounded-full p-0 text-xs"
+            >
+              {unreadCount}
+            </Badge>
+          )}
+          <span className="sr-only">Open notifications</span>
+        </Button>
+      </SheetTrigger>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Notifications</SheetTitle>
+        </SheetHeader>
+        <div className="py-4">
+            <div className="p-4 mb-4 bg-secondary rounded-lg">
+                <h4 className="font-semibold mb-2">AI Summary</h4>
+                {isSummarizing ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin"/>
+                        <span>Generating summary...</span>
+                    </div>
+                ) : (
+                    <p className="text-sm text-secondary-foreground">{summary}</p>
+                )}
             </div>
-          </ScrollArea>
-        </PopoverContent>
-      </Popover>
-
-      <AlertDialog open={isSummaryOpen} onOpenChange={setIsSummaryOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Sparkles className="text-primary"/> AI Summary
-            </AlertDialogTitle>
-            <AlertDialogDescription className="pt-4 text-foreground whitespace-pre-wrap">
-              {summary}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Close</AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+        </div>
+        <ScrollArea className="h-[calc(100%-12rem)] pr-4">
+          <div className="space-y-3">
+            {notifications.length > 0 ? (
+              notifications.map(notification => (
+                <div key={notification.id} className={`p-3 rounded-lg transition-colors ${notification.read ? 'bg-card' : 'bg-primary/10'}`}>
+                  <p className="text-sm">{notification.message}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formatDistanceToNow(new Date(notification.date), { addSuffix: true })}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-8">No notifications yet.</p>
+            )}
+          </div>
+        </ScrollArea>
+      </SheetContent>
+    </Sheet>
   );
 }
