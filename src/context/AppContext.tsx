@@ -20,6 +20,7 @@ async function resetData() {
         updates[`/taxis/${taxiId}/bookedSeats`] = 0;
         updates[`/taxis/${taxiId}/bookings`] = null;
         updates[`/taxis/${taxiId}/status`] = 'open';
+        updates[`/taxis/${taxiId}/bookingDeadline`] = "";
       }
     }
 
