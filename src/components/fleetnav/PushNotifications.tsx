@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -13,45 +13,49 @@ export function PushNotifications() {
   const { toast } = useToast();
   const [pushy, setPushy] = useState<any>(null);
 
+  const initializePushy = useCallback(() => {
+    try {
+      const pushyInstance = new (window as any).Pushy({ appId: '6696d5e75141b712a23e53b9' });
+      setPushy(pushyInstance);
+
+      pushyInstance.isRegistered().then((registered: boolean) => {
+        setIsRegistered(registered);
+        setIsLoading(false);
+      });
+    } catch (err) {
+      console.error("Failed to instantiate Pushy:", err);
+      setIsLoading(false);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to initialize notification service.',
+      });
+    }
+  }, [toast]);
+
   useEffect(() => {
-    // Function to check for Pushy and initialize
-    const initializePushy = () => {
-      if (window.Pushy) {
-        try {
-          // Initialize Pushy with your app ID
-          const pushyInstance = new (window as any).Pushy({ appId: '6696d5e75141b712a23e53b9' });
-          setPushy(pushyInstance);
-
-          // Check if already registered
-          pushyInstance.isRegistered().then((registered: boolean) => {
-            setIsRegistered(registered);
-            setIsLoading(false);
-          });
-        } catch (err) {
-          console.error("Failed to instantiate Pushy:", err);
-          setIsLoading(false);
-          toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'Failed to initialize notification service.',
-          });
-        }
-      } else {
-        // If Pushy SDK is not loaded yet, wait and retry
-        setTimeout(initializePushy, 100);
+    const interval = setInterval(() => {
+      if ((window as any).Pushy) {
+        clearInterval(interval);
+        initializePushy();
       }
-    };
-    
-    // Start the check
-    initializePushy();
+    }, 100); // Check every 100ms
 
-    // Register service worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/service-worker.js')
         .then(registration => console.log('Service Worker registered with scope:', registration.scope))
-        .catch(error => console.error('Service Worker registration failed:', error));
+        .catch(error => {
+          console.error('Service Worker registration failed:', error);
+          toast({
+            variant: 'destructive',
+            title: 'Service Worker Error',
+            description: `Registration failed: ${error.message}`,
+          });
+        });
     }
-  }, [toast]);
+
+    return () => clearInterval(interval);
+  }, [initializePushy, toast]);
 
   const handleEnableNotifications = async () => {
     if (!pushy) {
@@ -65,9 +69,7 @@ export function PushNotifications() {
     
     setIsLoading(true);
     try {
-      // Register the device for push notifications
       const deviceToken = await pushy.register();
-      // Save the device token to your backend
       const result = await registerAdminDevice(deviceToken);
 
       if (result.success) {
