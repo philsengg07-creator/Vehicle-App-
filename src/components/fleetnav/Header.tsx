@@ -2,7 +2,6 @@
 
 import { Car } from "lucide-react";
 import { RoleSwitcher } from "./RoleSwitcher";
-import { Notifications } from "./Notifications";
 import { useApp } from "@/hooks/use-app";
 
 export function Header() {
@@ -18,7 +17,6 @@ export function Header() {
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
           <RoleSwitcher />
-          {role === 'admin' && <Notifications />}
         </div>
       </div>
     </header>

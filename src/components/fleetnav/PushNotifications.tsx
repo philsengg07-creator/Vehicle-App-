@@ -7,13 +7,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Bell, BellRing, Loader2 } from 'lucide-react';
 import { registerAdminDevice } from '@/app/actions/registerAdminDevice';
 
-// Define Pushy on the window object for TypeScript
-declare global {
-  interface Window {
-    Pushy: any;
-  }
-}
-
 export function PushNotifications() {
   const [isRegistered, setIsRegistered] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -26,7 +19,7 @@ export function PushNotifications() {
       if (window.Pushy) {
         try {
           // Initialize Pushy with your app ID
-          const pushyInstance = new window.Pushy({ appId: '6696d5e75141b712a23e53b9' });
+          const pushyInstance = new (window as any).Pushy({ appId: '6696d5e75141b712a23e53b9' });
           setPushy(pushyInstance);
 
           // Check if already registered
