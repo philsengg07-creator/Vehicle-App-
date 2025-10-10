@@ -15,7 +15,7 @@ export function PushNotifications() {
 
   const checkRegistrationStatus = useCallback(async () => {
     if ((window as any).Pushy) {
-      const pushyInstance = new (window as any).Pushy({ appId: '6696d5e75141b712a23e53b9' });
+      const pushyInstance = new (window as any).Pushy({ appId: '68e6aecbb7e2f9df7184b4df' });
       setPushy(pushyInstance);
       const registered = await pushyInstance.isRegistered();
       setIsRegistered(registered);
