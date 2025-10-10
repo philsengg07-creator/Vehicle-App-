@@ -10,52 +10,54 @@ import { registerAdminDevice } from '@/app/actions/registerAdminDevice';
 export function PushNotifications() {
   const [isRegistered, setIsRegistered] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
   const [pushy, setPushy] = useState<any>(null);
+  const { toast } = useToast();
 
-  const initializePushy = useCallback(() => {
-    try {
+  const checkRegistrationStatus = useCallback(async () => {
+    if ((window as any).Pushy) {
       const pushyInstance = new (window as any).Pushy({ appId: '6696d5e75141b712a23e53b9' });
       setPushy(pushyInstance);
-
-      pushyInstance.isRegistered().then((registered: boolean) => {
-        setIsRegistered(registered);
-        setIsLoading(false);
-      });
-    } catch (err) {
-      console.error("Failed to instantiate Pushy:", err);
-      setIsLoading(false);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to initialize notification service.',
-      });
+      const registered = await pushyInstance.isRegistered();
+      setIsRegistered(registered);
     }
-  }, [toast]);
+    setIsLoading(false);
+  }, []);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      if ((window as any).Pushy) {
-        clearInterval(interval);
-        initializePushy();
-      }
-    }, 100); // Check every 100ms
-
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(registration => console.log('Service Worker registered with scope:', registration.scope))
-        .catch(error => {
+    const registerServiceWorker = async () => {
+      if ('serviceWorker' in navigator) {
+        try {
+          await navigator.serviceWorker.register('/service-worker.js');
+          console.log('Service Worker registered successfully.');
+          // Now that SW is registered, check Pushy registration
+          const interval = setInterval(() => {
+            if ((window as any).Pushy) {
+              clearInterval(interval);
+              checkRegistrationStatus();
+            }
+          }, 100);
+        } catch (error) {
           console.error('Service Worker registration failed:', error);
           toast({
             variant: 'destructive',
             title: 'Service Worker Error',
-            description: `Registration failed: ${error.message}`,
+            description: `Registration failed: ${(error as Error).message}`,
           });
+          setIsLoading(false);
+        }
+      } else {
+        setIsLoading(false);
+        toast({
+          variant: 'destructive',
+          title: 'Unsupported Browser',
+          description: 'Push notifications are not supported in this browser.',
         });
-    }
+      }
+    };
 
-    return () => clearInterval(interval);
-  }, [initializePushy, toast]);
+    registerServiceWorker();
+
+  }, [toast, checkRegistrationStatus]);
 
   const handleEnableNotifications = async () => {
     if (!pushy) {
