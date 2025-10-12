@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -21,38 +21,10 @@ export function PushNotifications() {
   const PUSHY_APP_ID = '68e6aecbb7e2f9df7184b4df';
 
   useEffect(() => {
-    const initializePushy = () => {
-      // Check if Pushy is loaded
-      if (window.Pushy) {
-        // Set the app ID
-        window.Pushy.setAppId(PUSHY_APP_ID);
-
-        // Check registration status
-        window.Pushy.isRegistered((err: any, registered: boolean) => {
-          if (err) {
-            console.error('Pushy isRegistered error:', err);
-            toast({
-              variant: 'destructive',
-              title: 'Pushy Error',
-              description: err.message || 'Failed to check registration status.',
-            });
-            setIsLoading(false);
-            return;
-          }
-          setIsRegistered(registered);
-          setIsLoading(false);
-        });
-      } else {
-        // If Pushy not loaded, wait and try again
-        setTimeout(initializePushy, 100);
-      }
-    };
-
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/service-worker.js')
         .then(registration => {
           console.log('Service Worker registered successfully with scope:', registration.scope);
-          initializePushy();
         })
         .catch(error => {
           console.error('Service Worker registration failed:', error);
@@ -63,14 +35,25 @@ export function PushNotifications() {
           });
           setIsLoading(false);
         });
-    } else {
-      setIsLoading(false);
-      toast({
-        variant: 'destructive',
-        title: 'Unsupported Browser',
-        description: 'Push notifications are not supported in this browser.',
-      });
     }
+
+    const checkPushy = () => {
+      if (window.Pushy) {
+        window.Pushy.setAppId(PUSHY_APP_ID);
+        window.Pushy.isRegistered((err: any, registered: boolean) => {
+          if (err) {
+            console.error('Pushy isRegistered error:', err);
+            setIsLoading(false);
+            return;
+          }
+          setIsRegistered(registered);
+          setIsLoading(false);
+        });
+      } else {
+        setTimeout(checkPushy, 100);
+      }
+    };
+    checkPushy();
   }, [toast]);
 
 
@@ -86,6 +69,7 @@ export function PushNotifications() {
     
     setIsLoading(true);
     try {
+      // Promisify the callback-based register function
       const deviceToken = await new Promise<string>((resolve, reject) => {
         window.Pushy.register((err: any, token: string) => {
           if (err) {
@@ -104,7 +88,7 @@ export function PushNotifications() {
           description: 'Push notifications have been enabled for this device.',
         });
       } else {
-        throw new Error(result.error || 'Failed to register device.');
+        throw new Error(result.error || 'Failed to register device on the server.');
       }
     } catch (error: any) {
       console.error('Pushy registration error:', error);
