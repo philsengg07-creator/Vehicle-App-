@@ -21,7 +21,7 @@ export function PushNotifications() {
   const PUSHY_APP_ID = '68e6aecbb7e2f9df7184b4df';
 
   useEffect(() => {
-    const checkPushy = () => {
+    const checkRegistration = () => {
       if (window.Pushy) {
         window.Pushy.setAppId(PUSHY_APP_ID);
         window.Pushy.isRegistered((err: any, registered: boolean) => {
@@ -34,10 +34,10 @@ export function PushNotifications() {
           setIsLoading(false);
         });
       } else {
-        setTimeout(checkPushy, 100);
+        setTimeout(checkRegistration, 100);
       }
     };
-    checkPushy();
+    checkRegistration();
   }, []);
 
   const handleEnableNotifications = async () => {
