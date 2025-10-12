@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,53 +16,36 @@ export function PushNotifications() {
   const PUSHY_APP_ID = '68e6aecbb7e2f9df7184b4df';
 
   useEffect(() => {
-    const initPushy = () => {
-      if ((window as any).Pushy) {
-        const pushyInstance = new (window as any).Pushy({ appId: PUSHY_APP_ID });
-        setPushy(pushyInstance);
-        
-        pushyInstance.isRegistered().then((registered: boolean) => {
-          setIsRegistered(registered);
-          setIsLoading(false);
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(registration => {
+            console.log('Service Worker registered successfully with scope:', registration.scope);
+            // Initialize Pushy
+            const pushyInstance = new (window as any).Pushy({ appId: PUSHY_APP_ID });
+            setPushy(pushyInstance);
+
+            pushyInstance.isRegistered().then((registered: boolean) => {
+              setIsRegistered(registered);
+              setIsLoading(false);
+            });
+          })
+          .catch(error => {
+            console.error('Service Worker registration failed:', error);
+            toast({
+              variant: 'destructive',
+              title: 'Service Worker Error',
+              description: `Registration failed: ${(error as Error).message}`,
+            });
+            setIsLoading(false);
+          });
+      } else {
+        setIsLoading(false);
+        toast({
+          variant: 'destructive',
+          title: 'Unsupported Browser',
+          description: 'Push notifications are not supported in this browser.',
         });
       }
-    };
-    
-    // Check if Pushy is already loaded
-    if ((window as any).Pushy) {
-      initPushy();
-    } else {
-      // If not, wait for our custom event from layout.tsx
-      window.addEventListener('pushy-loaded', initPushy);
-    }
-  
-    // Service Worker Registration
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(registration => {
-          console.log('Service Worker registered successfully with scope:', registration.scope);
-        })
-        .catch(error => {
-          console.error('Service Worker registration failed:', error);
-          toast({
-            variant: 'destructive',
-            title: 'Service Worker Error',
-            description: `Registration failed: ${(error as Error).message}`,
-          });
-        });
-    } else {
-      setIsLoading(false);
-      toast({
-        variant: 'destructive',
-        title: 'Unsupported Browser',
-        description: 'Push notifications are not supported in this browser.',
-      });
-    }
-
-    return () => {
-      window.removeEventListener('pushy-loaded', initPushy);
-    };
-
   }, [toast]);
 
 
