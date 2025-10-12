@@ -21,22 +21,6 @@ export function PushNotifications() {
   const PUSHY_APP_ID = '68e6aecbb7e2f9df7184b4df';
 
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(registration => {
-          console.log('Service Worker registered successfully with scope:', registration.scope);
-        })
-        .catch(error => {
-          console.error('Service Worker registration failed:', error);
-          toast({
-            variant: 'destructive',
-            title: 'Service Worker Error',
-            description: `Registration failed: ${(error as Error).message}`,
-          });
-          setIsLoading(false);
-        });
-    }
-
     const checkPushy = () => {
       if (window.Pushy) {
         window.Pushy.setAppId(PUSHY_APP_ID);
@@ -54,8 +38,7 @@ export function PushNotifications() {
       }
     };
     checkPushy();
-  }, [toast]);
-
+  }, []);
 
   const handleEnableNotifications = async () => {
     if (!window.Pushy) {
@@ -66,12 +49,12 @@ export function PushNotifications() {
       });
       return;
     }
-    
+
     setIsLoading(true);
     try {
       // Promisify the callback-based register function
       const deviceToken = await new Promise<string>((resolve, reject) => {
-        window.Pushy.register((err: any, token: string) => {
+        window.Pushy.register({ serviceWorkerLocation: '/pushy-service-worker.js' }, (err: any, token: string) => {
           if (err) {
             return reject(err);
           }
