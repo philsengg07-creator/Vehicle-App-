@@ -54,7 +54,7 @@ export function PushNotifications() {
     try {
       // Promisify the callback-based register function
       const deviceToken = await new Promise<string>((resolve, reject) => {
-        window.Pushy.register({ serviceWorkerLocation: '/pushy-service-worker.js' }, (err: any, token: string) => {
+        window.Pushy.register({ serviceWorkerLocation: '/service-worker.js' }, (err: any, token: string) => {
           if (err) {
             return reject(err);
           }
