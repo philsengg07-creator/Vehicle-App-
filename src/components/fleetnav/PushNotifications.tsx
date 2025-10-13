@@ -23,14 +23,18 @@ export function PushNotifications() {
   const PUSHY_APP_ID = '68e6aecbb7e2f9df7184b4df';
 
   useEffect(() => {
-    // Prevent this effect from running more than once
     if (pushyInitialized.current) return;
     pushyInitialized.current = true;
     
     console.log("Pushy SDK Initializing...");
 
-    const initPushy = () => {
-      // Check if device is already registered
+    const initializePushy = () => {
+      console.log("Pushy SDK found, proceeding with initialization.");
+      
+      // Crucially, set the App ID first
+      window.Pushy.setAppId(PUSHY_APP_ID);
+
+      // Then, check registration status
       window.Pushy.isRegistered((err: any, registered: boolean) => {
         setIsLoading(false);
         if (err) {
@@ -47,14 +51,12 @@ export function PushNotifications() {
       const interval = setInterval(() => {
         if (window.Pushy) {
           clearInterval(interval);
-          console.log("Pushy SDK found.");
-          initPushy();
+          initializePushy();
         }
       }, 500);
       return () => clearInterval(interval);
     } else {
-      console.log("Pushy SDK already loaded.");
-      initPushy();
+      initializePushy();
     }
   }, []);
 
@@ -73,11 +75,10 @@ export function PushNotifications() {
     
     // Register the device for push notifications
     window.Pushy.register((err: any, deviceToken: string) => {
-      setIsLoading(false);
-
       // Handle registration errors
       if (err) {
         console.error('Pushy registration error:', err);
+        setIsLoading(false);
         toast({
           variant: 'destructive',
           title: 'Registration Failed',
@@ -93,6 +94,7 @@ export function PushNotifications() {
       // Persist the device token to your backend
       registerAdminDevice(deviceToken)
         .then(result => {
+          setIsLoading(false);
           if (result.success) {
             setIsRegistered(true);
             console.log('Device token successfully registered on server.');
@@ -105,9 +107,9 @@ export function PushNotifications() {
           }
         })
         .catch(serverError => {
+          setIsLoading(false);
           console.error('Server registration error:', serverError);
-          // Optional: You might want to unregister from Pushy if your backend fails
-          setIsRegistered(false);
+          setIsRegistered(false); // Revert status on server failure
           toast({
             variant: 'destructive',
             title: 'Server Error',
