@@ -19,17 +19,15 @@ export default function PushyClient() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
+    if (typeof window === 'undefined' || window.Pushy) {
+        setIsLoading(false);
+        return;
     }
 
     const script = document.createElement('script');
     script.src = 'https://sdk.pushy.me/web/pushy-sdk.js';
     script.async = true;
-    document.head.appendChild(script);
-
-    const initializePushy = () => {
-      try {
+    script.onload = () => {
         if (!PUSHY_APP_ID) {
           console.error("Pushy App ID is not configured.");
           toast({
@@ -60,29 +58,25 @@ export default function PushyClient() {
           setIsRegistered(registered);
           setIsLoading(false);
         });
-
-      } catch (err: any) {
-        console.error('[Pushy] Initialization failed:', err);
+    };
+    script.onerror = () => {
+        console.error("Failed to load Pushy SDK script.");
         toast({
             variant: 'destructive',
-            title: 'Initialization Failed',
-            description: err.message || 'Could not initialize push notifications.',
+            title: 'Error',
+            description: 'Could not load push notification service.',
         });
         setIsLoading(false);
-      }
     };
-    
-    // Poll for Pushy SDK to be ready
-    const interval = setInterval(() => {
-      if (window.Pushy && typeof window.Pushy.setOptions === 'function') {
-        clearInterval(interval);
-        initializePushy();
-      }
-    }, 100);
+
+    document.head.appendChild(script);
 
     return () => {
-      clearInterval(interval);
-      document.head.removeChild(script);
+      // Clean up the script tag if the component unmounts
+      const existingScript = document.querySelector('script[src="https://sdk.pushy.me/web/pushy-sdk.js"]');
+      if (existingScript) {
+        document.head.removeChild(existingScript);
+      }
     };
 
   }, [toast]);
