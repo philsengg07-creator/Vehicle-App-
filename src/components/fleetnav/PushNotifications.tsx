@@ -10,7 +10,6 @@ import { registerAdminDevice } from '@/app/actions/registerAdminDevice';
 
 const PUSHY_APP_ID = '68e6aecbb7e2f9df7184b4df';
 
-// Declare the Pushy object on the window for TypeScript
 declare global {
   interface Window {
     Pushy: any;
@@ -98,7 +97,7 @@ export function PushNotifications() {
     
     // Poll for the Pushy SDK to be ready
     const interval = setInterval(() => {
-        if (window.Pushy) {
+        if (window.Pushy && typeof window.Pushy.setOptions === 'function') {
             clearInterval(interval);
             initializePushy();
         }
