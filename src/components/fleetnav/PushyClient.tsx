@@ -19,20 +19,18 @@ export default function PushyClient() {
   const { toast } = useToast();
 
   const registerDevice = useCallback(async () => {
+    if (!window.Pushy) {
+      toast({
+        variant: 'destructive',
+        title: 'Pushy Not Ready',
+        description: 'Pushy SDK is not available. Please refresh the page.',
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      if (!window.Pushy) {
-        throw new Error('Pushy SDK not loaded.');
-      }
-      
-      const deviceToken = await new Promise<string>((resolve, reject) => {
-        window.Pushy.register({ appId: PUSHY_APP_ID }).then((token: string) => {
-          resolve(token);
-        }).catch((err: any) => {
-          reject(err);
-        });
-      });
-      
+      const deviceToken = await window.Pushy.register({ appId: PUSHY_APP_ID });
       const result = await registerAdminDevice(deviceToken);
 
       if (result.success) {
@@ -58,45 +56,35 @@ export default function PushyClient() {
   }, [toast]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-        return;
+    if (typeof window === 'undefined' || window.Pushy) {
+      setIsLoading(false);
+      return;
     }
 
-    const checkRegistration = () => {
-      window.Pushy.isRegistered((err: any, registered: boolean) => {
-        if (err) {
-          console.error('[Pushy] Registration check failed:', err);
-          toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'Could not check push notification status.',
-          });
-        } else {
-          setIsRegistered(registered);
-        }
-        setIsLoading(false);
-      });
-    };
-    
-    // If Pushy is already loaded, check registration
-    if (window.Pushy) {
-        checkRegistration();
-        return;
-    }
-
-    // Otherwise, load it
     const script = document.createElement('script');
     script.src = 'https://sdk.pushy.me/web/pushy-sdk.js';
-    script.crossOrigin = 'anonymous';
     script.async = true;
 
     script.onload = () => {
-      // Set options after script has loaded
+      console.log('Pushy SDK loaded successfully.');
       if (window.Pushy) {
         window.Pushy.setOptions({
           serviceWorkerLocation: '/pushy-service-worker.js',
         });
-        checkRegistration();
+
+        window.Pushy.isRegistered((err: any, registered: boolean) => {
+          if (err) {
+            console.error('[Pushy] Registration check failed:', err);
+            toast({
+              variant: 'destructive',
+              title: 'Error',
+              description: 'Could not check push notification status.',
+            });
+          } else {
+            setIsRegistered(registered);
+          }
+          setIsLoading(false);
+        });
       }
     };
     
@@ -114,7 +102,9 @@ export default function PushyClient() {
 
     return () => {
       // Cleanup script tag on component unmount
-      document.head.removeChild(script);
+      if (document.head.contains(script)) {
+        document.head.removeChild(script);
+      }
     };
   }, [toast]);
 
