@@ -20,65 +20,57 @@ export function PushNotifications() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Manually register the service worker first.
-    // This is the most critical step to ensure it's active.
-    const registerServiceWorker = async () => {
-      if ('serviceWorker' in navigator) {
-        try {
-          const registration = await navigator.serviceWorker.register('/service-worker.js');
-          console.log('Service Worker registered successfully:', registration);
-        } catch (error) {
-          console.error('Service Worker registration failed:', error);
-          toast({
-            variant: 'destructive',
-            title: 'Critical Error',
-            description: 'Could not register notification service worker.',
-          });
-          setIsLoading(false);
-        }
-      }
-    };
-
-    const initializePushy = () => {
-      // Listen for the Pushy SDK to be ready
-      window.Pushy.ready((err: any) => {
-        if (err) {
-          console.error('Pushy SDK failed to load:', err);
-          toast({
-            variant: 'destructive',
-            title: 'SDK Error',
-            description: 'Notification service failed to load.',
-          });
-          setIsLoading(false);
-          return;
-        }
-
-        console.log('Pushy SDK is loaded and ready.');
-        setIsPushyReady(true);
-
-        // Now that SDK is ready, check the registration status
-        window.Pushy.isRegistered((err: any, registered: boolean) => {
-          setIsLoading(false);
-          if (err) {
-            console.error('Pushy isRegistered check failed:', err);
-            return;
-          }
-          setIsRegistered(registered);
-          console.log('Pushy registration status:', registered);
+    // This function will handle the entire initialization flow.
+    const initialize = async () => {
+      // 1. Manually register the service worker.
+      // This is the most robust way to ensure it's active.
+      if (!('serviceWorker' in navigator)) {
+        console.error('Service workers are not supported by this browser.');
+        toast({
+          variant: 'destructive',
+          title: 'Browser Not Supported',
+          description: 'This browser does not support push notifications.',
         });
-      });
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const registration = await navigator.serviceWorker.register('/service-worker.js');
+        console.log('Service Worker registered successfully:', registration);
+      } catch (error) {
+        console.error('Service Worker registration failed:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Critical Error',
+          description: 'Could not register notification service worker.',
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Wait for the Pushy SDK script to be loaded and the `window.Pushy` object to be available.
+      const interval = setInterval(() => {
+        if (typeof window.Pushy !== 'undefined') {
+          clearInterval(interval);
+          console.log('Pushy SDK is loaded and ready.');
+
+          // 3. Now that the SDK is ready, check the registration status.
+          window.Pushy.isRegistered((err: any, registered: boolean) => {
+            setIsLoading(false);
+            if (err) {
+              console.error('Pushy isRegistered check failed:', err);
+              return;
+            }
+            setIsRegistered(registered);
+            setIsPushyReady(true);
+            console.log('Pushy registration status:', registered);
+          });
+        }
+      }, 100); // Check every 100ms
     };
 
-    registerServiceWorker().then(() => {
-        // Now that the SW is being registered, load Pushy logic.
-        if (typeof window.Pushy !== 'undefined') {
-            initializePushy();
-        } else {
-            // Fallback if the script hasn't loaded yet
-            const script = document.querySelector('script[src="https://sdk.pushy.me/web/1.0.10/pushy-sdk.js"]');
-            script?.addEventListener('load', initializePushy);
-        }
-    });
+    initialize();
 
   }, [toast]);
 
@@ -96,11 +88,12 @@ export function PushNotifications() {
     setIsLoading(true);
     console.log("Starting Pushy registration process...");
     
-    window.Pushy.register().then((deviceToken: string) => {
+    window.Pushy.register().then(async (deviceToken: string) => {
       console.log('Pushy device token received:', deviceToken);
       console.log("Registering token on the server...");
-      return registerAdminDevice(deviceToken);
-    }).then((result: { success: boolean; error?: string }) => {
+      
+      const result = await registerAdminDevice(deviceToken);
+
       setIsLoading(false);
       if (result.success) {
         setIsRegistered(true);
