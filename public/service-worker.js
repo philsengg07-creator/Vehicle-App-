@@ -1,60 +1,47 @@
-/// <reference lib="webworker" />
-
-// We need to keep track of the clients so we can send messages back to them
-let clientPort = null;
+let deviceToken = null;
 
 try {
   importScripts('https://sdk.pushy.me/web/pushy-sw.js');
+  console.log('Pushy SW loaded successfully');
 } catch (e) {
-  console.error("Failed to load Pushy SW:", e);
+  console.error('Failed to load Pushy SW:', e);
 }
 
+
 self.addEventListener('message', (event) => {
-  if (event.data.type === 'GET_DEVICE_TOKEN') {
-    // Keep the port for later use
-    clientPort = event.ports[0];
+    if (event.data.type === 'GET_DEVICE_TOKEN') {
+        if (typeof Pushy === 'undefined') {
+            event.ports[0].postMessage({ error: 'Pushy SDK not loaded.' });
+            return;
+        }
 
-    if (typeof Pushy === 'undefined') {
-        clientPort.postMessage({ error: 'Pushy SDK failed to load.' });
-        return;
+        Pushy.setAppId(event.data.appId);
+
+        Pushy.register()
+            .then((token) => {
+                deviceToken = token;
+                event.ports[0].postMessage({ deviceToken: token });
+            })
+            .catch((err) => {
+                event.ports[0].postMessage({ error: err.message });
+            });
     }
 
-    // Set the app ID
-    Pushy.setAppId(event.data.appId);
-
-    // Register the device for push notifications
-    Pushy.register()
-      .then((deviceToken) => {
-        // Send the token back to the client
-        clientPort.postMessage({ deviceToken: deviceToken });
-      })
-      .catch((err) => {
-        // Send the error back to the client
-        clientPort.postMessage({ error: err.message });
-      });
-  }
-  
-  if (event.data.type === 'IS_REGISTERED') {
-    clientPort = event.ports[0];
-    if (typeof Pushy !== 'undefined' && Pushy.isRegistered()) {
-        clientPort.postMessage({ isRegistered: true });
-    } else {
-        clientPort.postMessage({ isRegistered: false });
+    if (event.data.type === 'IS_REGISTERED') {
+        if (typeof Pushy === 'undefined') {
+             event.ports[0].postMessage({ isRegistered: false, error: 'Pushy SDK not loaded.' });
+             return;
+        }
+        Pushy.isRegistered().then(isRegistered => {
+             event.ports[0].postMessage({ isRegistered: isRegistered });
+        });
     }
-  }
 });
 
-// Listen for incoming push notifications
 self.addEventListener('push', (event) => {
-  // Extract the notification data from the push event
-  const notification = event.data.json();
+  if (typeof Pushy === 'undefined' || !Pushy.isPushyPush(event)) {
+      return;
+  }
 
-  // Display the notification
-  event.waitUntil(
-    self.registration.showNotification(notification.title, {
-      body: notification.message,
-      icon: '/favicon.ico', // Optional
-      // ... other options
-    })
-  );
+  Pushy.handlePush(event);
 });

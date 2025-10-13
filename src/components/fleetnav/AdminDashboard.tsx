@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Taxi } from "@/types";
 
-const PushyClient = dynamic(() => import('./PushyClient').then(mod => mod.default), {
+const PushyClient = dynamic(() => import('./PushyClient'), {
   ssr: false,
 });
 
