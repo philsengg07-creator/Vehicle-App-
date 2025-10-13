@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -18,24 +17,40 @@ export function PushNotifications() {
   const [isRegistered, setIsRegistered] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const pushyInitialized = useRef(false);
 
   const PUSHY_APP_ID = '68e6aecbb7e2f9df7184b4df';
 
   useEffect(() => {
+    // Prevent re-initialization on re-renders
+    if (pushyInitialized.current) {
+        return;
+    }
+    pushyInitialized.current = true;
+
     // Function to check for Pushy and then check registration
     const initializePushy = () => {
       if (window.Pushy) {
         console.log('Pushy SDK found.');
-        // No need to create an instance here, just check registration
-        window.Pushy.isRegistered((err: any, registered: boolean) => {
-          setIsLoading(false);
-          if (err) {
-            console.error('Pushy isRegistered check failed:', err);
-            return;
-          }
-          console.log('Pushy registered status:', registered);
-          setIsRegistered(registered);
-        });
+        try {
+            const pushy = new window.Pushy(PUSHY_APP_ID, {
+                serviceWorkerLocation: '/service-worker.js'
+            });
+
+            pushy.isRegistered((err: any, registered: boolean) => {
+              setIsLoading(false);
+              if (err) {
+                console.error('Pushy isRegistered check failed:', err);
+                return;
+              }
+              console.log('Pushy registered status:', registered);
+              setIsRegistered(registered);
+            });
+        } catch (e) {
+            console.error("Failed to instantiate Pushy", e);
+            setIsLoading(false);
+        }
+
       } else {
         // If Pushy isn't loaded, wait and try again
         console.log('Pushy SDK not found, retrying...');
@@ -43,6 +58,7 @@ export function PushNotifications() {
       }
     };
     initializePushy();
+
   }, []);
 
   const handleEnableNotifications = async () => {
@@ -59,7 +75,9 @@ export function PushNotifications() {
     console.log('Starting notification registration process...');
     try {
       // Create a new Pushy instance with your App ID
-      const pushy = new window.Pushy(PUSHY_APP_ID);
+      const pushy = new window.Pushy(PUSHY_APP_ID, {
+          serviceWorkerLocation: '/service-worker.js'
+      });
       
       // Use a promise to handle the callback-based registration
       const deviceToken = await new Promise<string>((resolve, reject) => {
