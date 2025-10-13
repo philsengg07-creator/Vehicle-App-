@@ -27,28 +27,39 @@ export function PushNotifications() {
         setIsLoading(false);
         return;
     };
+
+    const initPushy = () => {
+      console.log("Pushy SDK Initializing...");
+      pushyInitialized.current = true;
+      
+      // Check if already registered
+      window.Pushy.isRegistered((err: any, registered: boolean) => {
+        setIsLoading(false);
+        if (err) {
+          console.error("Pushy isRegistered check failed:", err);
+          return;
+        }
+        setIsRegistered(registered);
+        console.log("Pushy registration status:", registered);
+      });
+    };
     
-
-    // Wait for the Pushy SDK to be loaded by the script tag in layout.tsx
-    const intervalId = setInterval(() => {
-      if (window.Pushy) {
-        clearInterval(intervalId);
-        console.log('Pushy SDK found.');
-        pushyInitialized.current = true;
-        
-        window.Pushy.isRegistered((err: any, registered: boolean) => {
-          setIsLoading(false);
-          if (err) {
-            console.error('Pushy isRegistered check failed:', err);
-            return;
-          }
-          setIsRegistered(registered);
-        });
-      }
-    }, 100); // Check for Pushy every 100ms
-
-    return () => clearInterval(intervalId);
-  }, []);
+    // Wait until Pushy SDK script loads
+    if (typeof window.Pushy === 'undefined') {
+      console.log("Pushy SDK not loaded yet, waiting...");
+      const interval = setInterval(() => {
+        if (window.Pushy) {
+          clearInterval(interval);
+          console.log("Pushy SDK found.");
+          initPushy();
+        }
+      }, 500);
+      return () => clearInterval(interval);
+    } else {
+      console.log("Pushy SDK already loaded.");
+      initPushy();
+    }
+  }, []); // Empty dependency array to run only once on mount
 
   const handleEnableNotifications = () => {
     if (!window.Pushy) {
@@ -61,68 +72,51 @@ export function PushNotifications() {
     }
 
     setIsLoading(true);
-    console.log('Starting notification registration process...');
+    console.log("Starting notification registration process...");
     
-    // Register the user for push notifications
     window.Pushy.register((err: any, deviceToken: string) => {
-        // Handle registration errors
-        if (err) {
-            console.error('Pushy registration failed:', err);
-            toast({
-                variant: 'destructive',
-                title: 'Notification Setup Failed',
-                description: err.message || 'An unknown error occurred during registration.',
-            });
-            setIsRegistered(false);
-            setIsLoading(false);
-            return;
-        }
+      if (err) {
+        console.error('Pushy registration error:', err);
+        toast({
+          variant: 'destructive',
+          title: 'Registration Failed',
+          description: err.message || 'Could not register for notifications.',
+        });
+        setIsLoading(false);
+        return;
+      }
 
-        // Check if a token was received
-        if (!deviceToken) {
-           console.error('Pushy registration failed: No token received.');
-           toast({
-            variant: 'destructive',
-            title: 'Notification Setup Failed',
-            description: "Pushy registration failed: No token received.",
-          });
-          setIsRegistered(false);
-          setIsLoading(false);
-          return;
-        }
-        
-        console.log('Pushy device token received:', deviceToken);
-        console.log("Registering token on the server...");
-        
-        // Asynchronously send the token to the server
-        registerAdminDevice(deviceToken).then(result => {
-            if (result.success) {
-                setIsRegistered(true);
-                console.log('Device token successfully registered on server.');
-                toast({
-                    title: 'Success',
-                    description: 'Push notifications have been enabled for this device.',
-                });
-            } else {
-                // If the server fails to save the token, we are not truly registered.
-                setIsRegistered(false);
-                throw new Error(result.error || 'Failed to register device on the server.');
-            }
-        }).catch(serverError => {
-            console.error('Server registration error:', serverError);
+      console.log('Pushy device token received:', deviceToken);
+      console.log("Registering token on the server...");
+
+      registerAdminDevice(deviceToken)
+        .then(result => {
+          if (result.success) {
+            setIsRegistered(true);
+            console.log('Device token successfully registered on server.');
             toast({
-                variant: 'destructive',
-                title: 'Server Registration Failed',
-                description: serverError.message || 'Could not save device token.',
+              title: 'Success',
+              description: 'Push notifications have been enabled for this device.',
             });
-             setIsRegistered(false);
-        }).finally(() => {
-            setIsLoading(false);
-            console.log('Notification registration process finished.');
+          } else {
+            throw new Error(result.error || 'Server registration failed.');
+          }
+        })
+        .catch(serverError => {
+          console.error('Server registration error:', serverError);
+          setIsRegistered(false); // Rollback state
+          toast({
+            variant: 'destructive',
+            title: 'Server Error',
+            description: serverError.message || 'Could not save device token.',
+          });
+        })
+        .finally(() => {
+          setIsLoading(false);
+          console.log('Notification registration process finished.');
         });
     });
   };
-
 
   return (
     <Card>
