@@ -23,17 +23,18 @@ export function PushNotifications() {
 
   useEffect(() => {
     // Prevent re-initialization on re-renders
-    if (pushyInitialized.current) return;
-    pushyInitialized.current = true;
+    if (pushyInitialized.current) {
+        setIsLoading(false);
+        return;
+    };
+    
 
     // Wait for the Pushy SDK to be loaded by the script tag in layout.tsx
     const intervalId = setInterval(() => {
       if (window.Pushy) {
         clearInterval(intervalId);
         console.log('Pushy SDK found.');
-
-        // Set the App ID
-        window.Pushy.setAppId(PUSHY_APP_ID);
+        pushyInitialized.current = true;
         
         window.Pushy.isRegistered((err: any, registered: boolean) => {
           setIsLoading(false);
@@ -91,6 +92,7 @@ export function PushNotifications() {
         }
         
         console.log('Pushy device token received:', deviceToken);
+        console.log("Registering token on the server...");
         
         // Asynchronously send the token to the server
         registerAdminDevice(deviceToken).then(result => {
