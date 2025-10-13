@@ -20,13 +20,27 @@ export function PushNotifications() {
   const pushyInitialized = useRef(false);
 
   useEffect(() => {
-    if (pushyInitialized.current || typeof window === 'undefined') return;
+    // Manually register the service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/pushy-sw.js')
+        .then(registration => {
+          console.log('Pushy service worker registered successfully:', registration);
+        })
+        .catch(error => {
+          console.error('Service worker registration failed:', error);
+          toast({
+            variant: 'destructive',
+            title: 'Service Worker Error',
+            description: 'Could not install the notification service.',
+          });
+        });
+    }
 
     const initializePushy = () => {
       if (pushyInitialized.current) return;
       pushyInitialized.current = true;
 
-      console.log("Pushy SDK found, proceeding with initialization.");
+      console.log("Pushy SDK script loaded, proceeding with initialization.");
 
       window.Pushy.isRegistered((err: any, registered: boolean) => {
         setIsLoading(false);
@@ -47,7 +61,7 @@ export function PushNotifications() {
     }, 100);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [toast]);
 
   const handleEnableNotifications = () => {
     if (!window.Pushy) {
@@ -62,12 +76,9 @@ export function PushNotifications() {
     setIsLoading(true);
     console.log("Starting notification registration process...");
     
-    // Register the user for push notifications
     window.Pushy.register().then((deviceToken: string) => {
       console.log('Pushy device token received:', deviceToken);
       console.log("Registering token on the server...");
-
-      // Call your server-side action to store the token
       return registerAdminDevice(deviceToken);
     }).then((result: { success: boolean; error?: string }) => {
       setIsLoading(false);
