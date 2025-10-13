@@ -21,23 +21,24 @@ export function PushNotifications() {
   const PUSHY_APP_ID = '68e6aecbb7e2f9df7184b4df';
 
   useEffect(() => {
-    const checkRegistration = () => {
+    // Function to check for Pushy and then check registration
+    const initializePushy = () => {
       if (window.Pushy) {
         window.Pushy.setAppId(PUSHY_APP_ID);
         window.Pushy.isRegistered((err: any, registered: boolean) => {
+          setIsLoading(false);
           if (err) {
-            console.error('Pushy isRegistered error:', err);
-            setIsLoading(false);
+            console.error('Pushy isRegistered check failed:', err);
             return;
           }
           setIsRegistered(registered);
-          setIsLoading(false);
         });
       } else {
-        setTimeout(checkRegistration, 100);
+        // If Pushy isn't loaded, wait and try again
+        setTimeout(initializePushy, 100);
       }
     };
-    checkRegistration();
+    initializePushy();
   }, []);
 
   const handleEnableNotifications = async () => {
@@ -52,11 +53,14 @@ export function PushNotifications() {
 
     setIsLoading(true);
     try {
-      // Promisify the callback-based register function
+      // Use a promise to handle the callback-based registration
       const deviceToken = await new Promise<string>((resolve, reject) => {
-        window.Pushy.register({ serviceWorkerLocation: '/service-worker.js' }, (err: any, token: string) => {
+        window.Pushy.register((err: any, token: string) => {
           if (err) {
             return reject(err);
+          }
+          if (!token) {
+            return reject(new Error("Pushy registration failed: No token received."));
           }
           resolve(token);
         });
@@ -75,8 +79,8 @@ export function PushNotifications() {
       }
     } catch (error: any) {
       console.error('Pushy registration error:', error);
-      let errorMessage = 'An unknown error occurred.';
-      if (error.message) {
+      let errorMessage = 'An unknown error occurred during registration.';
+      if (error && error.message) {
         errorMessage = error.message;
       }
       toast({

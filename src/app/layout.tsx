@@ -20,7 +20,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
         {/* Preload Pushy SDK globally - Official URL */}
         <script 
-          src="https://pushy.me/sdk/web/pushy-sdk.js" 
+          src="https://sdk.pushy.me/web/1.0.10/pushy-sdk.js"
           async
         ></script>
       </head>
