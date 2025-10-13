@@ -1,6 +1,6 @@
-
 // src/lib/firebase.ts
 import { initializeApp, getApp, getApps } from 'firebase/app';
+// Use the compat version of the database to avoid service worker conflicts
 import { getDatabase } from 'firebase/database';
 
 
