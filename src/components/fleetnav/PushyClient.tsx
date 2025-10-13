@@ -19,94 +19,87 @@ export default function PushyClient() {
   const { toast } = useToast();
 
   const registerDevice = useCallback(async () => {
-    if (!window.Pushy) {
-      toast({
-        variant: 'destructive',
-        title: 'Pushy Not Ready',
-        description: 'Pushy SDK is not available. Please refresh the page.',
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const deviceToken = await window.Pushy.register({ appId: PUSHY_APP_ID });
-      const result = await registerAdminDevice(deviceToken);
-
-      if (result.success) {
-        setIsRegistered(true);
+    if (!('serviceWorker' in navigator)) {
         toast({
-          title: 'Success',
-          description: 'Push notifications enabled for this device.',
+            variant: 'destructive',
+            title: 'Unsupported Browser',
+            description: 'Push notifications are not supported in this browser.',
         });
-      } else {
-        throw new Error(result.error || 'Server registration failed.');
-      }
-    } catch (err: any) {
-      setIsRegistered(false);
-      console.error('[Pushy] Registration failed:', err);
-      toast({
-        variant: 'destructive',
-        title: 'Registration Failed',
-        description: err.message || 'Could not register for push notifications.',
-      });
-    } finally {
-      setIsLoading(false);
+        return;
     }
-  }, [toast]);
+    
+    setIsLoading(true);
+
+    try {
+        const registration = await navigator.serviceWorker.register('/service-worker.js?appId=' + PUSHY_APP_ID);
+        
+        await navigator.serviceWorker.ready;
+
+        const deviceToken = await new Promise((resolve, reject) => {
+            const messageChannel = new MessageChannel();
+            messageChannel.port1.onmessage = (event) => {
+                if (event.data.error) {
+                    reject(new Error(event.data.error));
+                } else {
+                    resolve(event.data.deviceToken);
+                }
+            };
+            if(registration.active) {
+                registration.active.postMessage({ type: 'GET_DEVICE_TOKEN' }, [messageChannel.port2]);
+            } else {
+                reject(new Error("Service worker is not active."));
+            }
+        });
+
+        if (!deviceToken) {
+            throw new Error('Failed to get device token from service worker.');
+        }
+
+        const result = await registerAdminDevice(deviceToken as string);
+
+        if (result.success) {
+            setIsRegistered(true);
+            toast({
+                title: 'Success',
+                description: 'Push notifications enabled for this device.',
+            });
+        } else {
+            throw new Error(result.error || 'Server registration failed.');
+        }
+    } catch (err: any) {
+        setIsRegistered(false);
+        console.error('[Pushy] Registration failed:', err);
+        toast({
+            variant: 'destructive',
+            title: 'Registration Failed',
+            description: err.message || 'Could not register for push notifications.',
+        });
+    } finally {
+        setIsLoading(false);
+    }
+}, [toast]);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || window.Pushy) {
-      setIsLoading(false);
-      return;
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistration().then(registration => {
+            if (registration && registration.active) {
+                const messageChannel = new MessageChannel();
+                messageChannel.port1.onmessage = (event) => {
+                    if (event.data && event.data.isRegistered) {
+                        setIsRegistered(true);
+                    }
+                    setIsLoading(false);
+                };
+                registration.active.postMessage({ type: 'IS_REGISTERED' }, [messageChannel.port2]);
+            } else {
+                setIsRegistered(false);
+                setIsLoading(false);
+            }
+        });
+    } else {
+        setIsLoading(false);
     }
-
-    const script = document.createElement('script');
-    script.src = 'https://sdk.pushy.me/web/pushy-sdk.js';
-    script.async = true;
-
-    script.onload = () => {
-      console.log('Pushy SDK loaded successfully.');
-      if (window.Pushy) {
-        window.Pushy.setOptions({
-          serviceWorkerLocation: '/pushy-service-worker.js',
-        });
-
-        window.Pushy.isRegistered((err: any, registered: boolean) => {
-          if (err) {
-            console.error('[Pushy] Registration check failed:', err);
-            toast({
-              variant: 'destructive',
-              title: 'Error',
-              description: 'Could not check push notification status.',
-            });
-          } else {
-            setIsRegistered(registered);
-          }
-          setIsLoading(false);
-        });
-      }
-    };
-    
-    script.onerror = () => {
-      console.error('Failed to load Pushy SDK script.');
-      toast({
-        variant: 'destructive',
-        title: 'Network Error',
-        description: 'Failed to load Pushy SDK. Please check your internet connection and ad-blocker.',
-      });
-      setIsLoading(false);
-    };
-
-    document.head.appendChild(script);
-
-    return () => {
-      // Cleanup script tag on component unmount
-      if (document.head.contains(script)) {
-        document.head.removeChild(script);
-      }
-    };
-  }, [toast]);
+  }, []);
 
 
   return (
