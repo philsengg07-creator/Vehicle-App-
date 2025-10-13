@@ -13,7 +13,7 @@ declare global {
   }
 }
 
-export function PushNotifications() {
+export default function PushNotifications() {
   const [isRegistered, setIsRegistered] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -21,6 +21,9 @@ export function PushNotifications() {
   const registerDevice = useCallback(async () => {
     setIsLoading(true);
     try {
+      if (!window.Pushy) {
+        throw new Error('Pushy SDK not loaded.');
+      }
       const deviceToken = await window.Pushy.register();
       const result = await registerAdminDevice(deviceToken);
 
@@ -48,18 +51,31 @@ export function PushNotifications() {
 
   useEffect(() => {
     if (!PUSHY_APP_ID) {
-      console.error("Pushy App ID is not configured. Please set NEXT_PUBLIC_PUSHY_APP_ID in .env.local");
+      console.error("Pushy App ID is not configured.");
       setIsLoading(false);
       return;
     }
 
-    const interval = setInterval(() => {
-      if (window.Pushy && typeof window.Pushy.setOptions === 'function') {
-        clearInterval(interval);
-        
-        window.Pushy.setOptions({ appId: PUSHY_APP_ID });
+    if (document.getElementById('pushy-sdk')) {
+        return;
+    }
 
-        navigator.serviceWorker.register('/service-worker.js').then(() => {
+    const script = document.createElement('script');
+    script.id = 'pushy-sdk';
+    script.src = 'https://sdk.pushy.me/web/1.0.10/pushy-sdk.js';
+    script.async = true;
+
+    script.onload = () => {
+      if (!window.Pushy) {
+        console.error('Pushy SDK loaded but window.Pushy is not available.');
+        setIsLoading(false);
+        return;
+      }
+      
+      window.Pushy.setOptions({ appId: PUSHY_APP_ID });
+
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(() => {
           window.Pushy.isRegistered((err: any, registered: boolean) => {
             if (err) {
               console.error('Pushy isRegistered check failed:', err);
@@ -69,7 +85,8 @@ export function PushNotifications() {
             setIsRegistered(registered);
             setIsLoading(false);
           });
-        }).catch((err: any) => {
+        })
+        .catch((err: any) => {
           console.error('Service Worker registration failed:', err);
           toast({
             variant: 'destructive',
@@ -78,14 +95,24 @@ export function PushNotifications() {
           });
           setIsLoading(false);
         });
-      }
-    }, 100);
+    };
+    
+    script.onerror = () => {
+        console.error('Failed to load Pushy SDK script.');
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Failed to load push notification service.',
+        });
+        setIsLoading(false);
+    }
 
-    return () => clearInterval(interval);
+    document.head.appendChild(script);
+
   }, [toast]);
 
   return (
-    <PushNotificationsCard 
+    <PushNotificationsCard
       isLoading={isLoading}
       isRegistered={isRegistered}
       onRegister={registerDevice}

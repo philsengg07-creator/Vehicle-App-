@@ -23,7 +23,6 @@ export default function RootLayout({
       <body className="font-body antialiased">
         {children}
         <Toaster />
-        <Script src="https://sdk.pushy.me/web/1.0.10/pushy-sdk.js" strategy="lazyOnload" />
       </body>
     </html>
   );
