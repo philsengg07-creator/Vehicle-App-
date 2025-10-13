@@ -39,17 +39,15 @@ export function PushNotifications() {
       });
     };
     
-    if (typeof window.Pushy === 'undefined') {
-      const interval = setInterval(() => {
-        if (typeof window.Pushy !== 'undefined') {
-          clearInterval(interval);
-          initializePushy();
-        }
-      }, 500);
-      return () => clearInterval(interval);
-    } else {
-      initializePushy();
-    }
+    // Wait for the Pushy SDK to be loaded by the script tag in layout.tsx
+    const interval = setInterval(() => {
+      if (typeof window.Pushy !== 'undefined') {
+        clearInterval(interval);
+        initializePushy();
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleEnableNotifications = () => {
