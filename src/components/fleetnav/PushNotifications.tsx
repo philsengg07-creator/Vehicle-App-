@@ -25,11 +25,9 @@ export function PushNotifications() {
     
     console.log("Pushy SDK Initializing...");
 
-    // Function to run after Pushy is loaded
     const initializePushy = () => {
       console.log("Pushy SDK found, proceeding with initialization.");
       
-      // Check registration status
       window.Pushy.isRegistered((err: any, registered: boolean) => {
         setIsLoading(false);
         if (err) {
@@ -41,7 +39,6 @@ export function PushNotifications() {
       });
     };
     
-    // Wait until Pushy SDK script loads
     if (typeof window.Pushy === 'undefined') {
       const interval = setInterval(() => {
         if (typeof window.Pushy !== 'undefined') {
@@ -68,13 +65,10 @@ export function PushNotifications() {
     setIsLoading(true);
     console.log("Starting notification registration process...");
     
-    // Register the device for push notifications
-    window.Pushy.register({ serviceWorker: '/pushy-service-worker.js' }).then((deviceToken: string) => {
-        // Registration successful, proceed to persist the token
+    window.Pushy.register().then((deviceToken: string) => {
         console.log('Pushy device token received:', deviceToken);
         console.log("Registering token on the server...");
 
-        // Persist the device token to your backend
         return registerAdminDevice(deviceToken);
     }).then(result => {
       setIsLoading(false);
@@ -89,7 +83,6 @@ export function PushNotifications() {
         throw new Error(result.error || 'Server registration failed.');
       }
     }).catch((err: any) => {
-        // Handle registration errors
         console.error('Pushy registration error:', err);
         setIsLoading(false);
         toast({
