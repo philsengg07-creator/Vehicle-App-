@@ -20,7 +20,7 @@ export function PushNotifications() {
   const pushyInitialized = useRef(false);
 
   useEffect(() => {
-    if (pushyInitialized.current) return;
+    if (pushyInitialized.current || typeof window === 'undefined') return;
     pushyInitialized.current = true;
     
     console.log("Pushy SDK Initializing...");
@@ -43,7 +43,7 @@ export function PushNotifications() {
     // Wait until Pushy SDK script loads
     if (typeof window.Pushy === 'undefined') {
       const interval = setInterval(() => {
-        if (window.Pushy) {
+        if (typeof window.Pushy !== 'undefined') {
           clearInterval(interval);
           initializePushy();
         }

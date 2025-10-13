@@ -1,6 +1,5 @@
 // src/lib/firebase.ts
 import { initializeApp, getApp, getApps } from 'firebase/app';
-// Use the compat version of the database to avoid service worker conflicts
 import { getDatabase } from 'firebase/database';
 
 
@@ -9,7 +8,6 @@ export const firebaseConfig = {
   authDomain: "studio-6451719734-ee0cd.firebaseapp.com",
   projectId: "studio-6451719734-ee0cd",
   storageBucket: "studio-6451719734-ee0cd.firebasestorage.app",
-  messagingSenderId: "938204376421",
   appId: "1:938204376421:web:fc26601d358695c130858c",
   databaseURL: "https://studio-6451719734-ee0cd-default-rtdb.asia-southeast1.firebasedatabase.app/"
 };
