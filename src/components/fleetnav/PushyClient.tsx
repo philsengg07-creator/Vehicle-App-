@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
@@ -7,12 +6,6 @@ import { registerAdminDevice } from '@/app/actions/registerAdminDevice';
 import { PushNotificationsCard } from './PushNotificationsCard';
 
 const PUSHY_APP_ID = process.env.NEXT_PUBLIC_PUSHY_APP_ID;
-
-declare global {
-  interface Window {
-    Pushy: any;
-  }
-}
 
 export default function PushyClient() {
   const [isRegistered, setIsRegistered] = useState(false);
@@ -33,7 +26,7 @@ export default function PushyClient() {
     setIsLoading(true);
 
     try {
-        const registration = await navigator.serviceWorker.register('/service-worker.js?appId=' + PUSHY_APP_ID);
+        const registration = await navigator.serviceWorker.register('/service-worker.js');
         
         await navigator.serviceWorker.ready;
 
@@ -47,7 +40,7 @@ export default function PushyClient() {
                 }
             };
             if(registration.active) {
-                registration.active.postMessage({ type: 'GET_DEVICE_TOKEN' }, [messageChannel.port2]);
+                registration.active.postMessage({ type: 'GET_DEVICE_TOKEN', appId: PUSHY_APP_ID }, [messageChannel.port2]);
             } else {
                 reject(new Error("Service worker is not active."));
             }
@@ -74,7 +67,7 @@ export default function PushyClient() {
         toast({
             variant: 'destructive',
             title: 'Registration Failed',
-            description: err.message || 'Could not register for push notifications.',
+            description: err.message || 'Could not register for push notifications. Check if the domain is whitelisted in Pushy dashboard.',
         });
     } finally {
         setIsLoading(false);
