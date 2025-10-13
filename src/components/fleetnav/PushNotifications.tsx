@@ -7,6 +7,7 @@ import { PushNotificationsCard } from './PushNotificationsCard';
 
 const PUSHY_APP_ID = process.env.NEXT_PUBLIC_PUSHY_APP_ID;
 
+// Declare the Pushy type on the window object to satisfy TypeScript
 declare global {
   interface Window {
     Pushy: any;
@@ -57,46 +58,43 @@ export function PushNotifications() {
     }
 
     if (document.getElementById('pushy-sdk')) {
-        // If script is already there, maybe it's loaded or loading.
-        if (window.Pushy) {
-             // If already loaded, proceed
-             initializePushy();
-        }
-        return;
+      return;
     }
 
     const script = document.createElement('script');
     script.id = 'pushy-sdk';
     script.src = 'https://sdk.pushy.me/web/1.0.10/pushy-sdk.js';
     script.async = true;
-    script.onload = initializePushy;
-    
-    script.onerror = () => {
-        console.error('Failed to load Pushy SDK script.');
-        toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'Failed to load push notification service.',
-        });
-        setIsLoading(false);
-    }
-
     document.head.appendChild(script);
 
-    function initializePushy() {
-        if (!window.Pushy) {
-          console.error('Pushy SDK loaded but window.Pushy is not available.');
-          setIsLoading(false);
-          return;
+    // This function will poll until the Pushy SDK is fully initialized
+    const waitForPushy = () => {
+      const interval = setInterval(() => {
+        // Check for the object and the specific function we need
+        if (window.Pushy && typeof window.Pushy.setOptions === 'function') {
+          clearInterval(interval);
+          initializePushy();
         }
-        
+      }, 100); // Check every 100ms
+    };
+
+    const initializePushy = () => {
+      try {
+        // Set the App ID - this is the correct place
         window.Pushy.setOptions({ appId: PUSHY_APP_ID });
   
+        // Register the service worker
         navigator.serviceWorker.register('/service-worker.js')
           .then(() => {
+            // Now that the SW is registered, check if the device is already registered
             window.Pushy.isRegistered((err: any, registered: boolean) => {
               if (err) {
                 console.error('Pushy isRegistered check failed:', err);
+                toast({
+                  variant: 'destructive',
+                  title: 'Error',
+                  description: 'Could not check push notification status.',
+                });
                 setIsLoading(false);
                 return;
               }
@@ -113,7 +111,19 @@ export function PushNotifications() {
             });
             setIsLoading(false);
           });
-      };
+      } catch (err: any) {
+        console.error('Error during Pushy initialization:', err);
+        toast({
+            variant: 'destructive',
+            title: 'Initialization Failed',
+            description: err.message || 'Could not initialize push notifications.',
+        });
+        setIsLoading(false);
+      }
+    };
+    
+    // Start polling when the component mounts
+    waitForPushy();
 
   }, [toast]);
 
