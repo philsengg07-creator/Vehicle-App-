@@ -21,30 +21,29 @@ export function PushNotifications() {
 
   useEffect(() => {
     if (pushyInitialized.current || typeof window === 'undefined') return;
-    pushyInitialized.current = true;
     
-    console.log("Pushy SDK Initializing...");
-
     const initializePushy = () => {
-      console.log("Pushy SDK found, proceeding with initialization.");
-      
-      window.Pushy.isRegistered((err: any, registered: boolean) => {
-        setIsLoading(false);
-        if (err) {
-          console.error("Pushy isRegistered check failed:", err);
-          return;
-        }
-        setIsRegistered(registered);
-        console.log("Pushy registration status:", registered);
-      });
+        if (pushyInitialized.current) return;
+        pushyInitialized.current = true;
+
+        console.log("Pushy SDK found, proceeding with initialization.");
+
+        window.Pushy.isRegistered((err: any, registered: boolean) => {
+            setIsLoading(false);
+            if (err) {
+                console.error("Pushy isRegistered check failed:", err);
+                return;
+            }
+            setIsRegistered(registered);
+            console.log("Pushy registration status:", registered);
+        });
     };
-    
-    // Wait for the Pushy SDK to be loaded by the script tag in layout.tsx
+
     const interval = setInterval(() => {
-      if (typeof window.Pushy !== 'undefined') {
-        clearInterval(interval);
-        initializePushy();
-      }
+        if (typeof window.Pushy !== 'undefined') {
+            clearInterval(interval);
+            initializePushy();
+        }
     }, 100);
 
     return () => clearInterval(interval);
@@ -63,7 +62,7 @@ export function PushNotifications() {
     setIsLoading(true);
     console.log("Starting notification registration process...");
     
-    window.Pushy.register().then((deviceToken: string) => {
+    window.Pushy.register({ serviceWorker: '/service-worker-v2.js' }).then((deviceToken: string) => {
         console.log('Pushy device token received:', deviceToken);
         console.log("Registering token on the server...");
 
