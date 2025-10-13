@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Bell, BellRing, Loader2 } from 'lucide-react';
 import { registerAdminDevice } from '@/app/actions/registerAdminDevice';
 
-const PUSHY_APP_ID = '68e6aecbb7e2f9df7184b4df';
+const PUSHY_APP_ID = process.env.NEXT_PUBLIC_PUSHY_APP_ID;
 
 declare global {
   interface Window {
@@ -25,10 +25,10 @@ export function PushNotifications() {
   const registerDevice = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Register the user for push notifications
+      if (!isPushyReady) {
+        throw new Error('Pushy SDK not ready.');
+      }
       const deviceToken = await window.Pushy.register();
-      
-      // Pass the token to the server
       const result = await registerAdminDevice(deviceToken);
 
       if (result.success) {
@@ -50,61 +50,61 @@ export function PushNotifications() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, isPushyReady]);
 
   useEffect(() => {
-    // This effect runs only on the client
     if (typeof window === 'undefined') {
-      return;
+        return;
     }
 
-    const initializePushy = () => {
-      // Set the App ID
-      window.Pushy.setOptions({ appId: PUSHY_APP_ID });
+    if (!PUSHY_APP_ID) {
+        console.error("Pushy App ID is not configured. Please set NEXT_PUBLIC_PUSHY_APP_ID environment variable.");
+        setIsLoading(false);
+        return;
+    }
 
-      // Register the service worker
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(() => {
-          console.log('Pushy service worker registered.');
-          
-          // Check registration status
-          window.Pushy.isRegistered((err: any, registered: boolean) => {
-            if (err) {
-              console.error('Pushy isRegistered check failed:', err);
-              toast({
-                variant: 'destructive',
-                title: 'Error',
-                description: 'Could not check notification status.',
-              });
-              setIsLoading(false);
-              return;
-            }
-            setIsRegistered(registered);
-            setIsPushyReady(true);
-            setIsLoading(false);
-          });
-        })
-        .catch((err: any) => {
-          console.error('Service Worker registration failed:', err);
-          toast({
-            variant: 'destructive',
-            title: 'Critical Error',
-            description: `Could not register the notification service: ${err.message}`,
-          });
-          setIsLoading(false);
-        });
-    };
-    
-    // Poll for the Pushy SDK to be ready
     const interval = setInterval(() => {
         if (window.Pushy && typeof window.Pushy.setOptions === 'function') {
             clearInterval(interval);
-            initializePushy();
+            
+            // Set the App ID
+            window.Pushy.setOptions({ appId: PUSHY_APP_ID });
+
+            // Register the service worker
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(() => {
+                    console.log('Pushy service worker registered.');
+
+                    // Check registration status
+                    window.Pushy.isRegistered((err: any, registered: boolean) => {
+                        if (err) {
+                            console.error('Pushy isRegistered check failed:', err);
+                            toast({
+                                variant: 'destructive',
+                                title: 'Error',
+                                description: 'Could not check notification status.',
+                            });
+                            setIsLoading(false);
+                            return;
+                        }
+                        setIsRegistered(registered);
+                        setIsPushyReady(true);
+                        setIsLoading(false);
+                    });
+                })
+                .catch((err: any) => {
+                    console.error('Service Worker registration failed:', err);
+                    toast({
+                        variant: 'destructive',
+                        title: 'Critical Error',
+                        description: `Could not register the notification service: ${err.message}`,
+                    });
+                    setIsLoading(false);
+                });
         }
     }, 100);
 
     return () => clearInterval(interval);
-
   }, [toast]);
 
   return (
