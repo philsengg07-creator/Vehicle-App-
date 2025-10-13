@@ -25,6 +25,7 @@ export function PushNotifications() {
     
     console.log("Pushy SDK Initializing...");
 
+    // Function to run after Pushy is loaded
     const initializePushy = () => {
       console.log("Pushy SDK found, proceeding with initialization.");
       
@@ -68,47 +69,33 @@ export function PushNotifications() {
     console.log("Starting notification registration process...");
     
     // Register the device for push notifications
-    window.Pushy.register((err: any, deviceToken: string) => {
-      // Handle registration errors
-      if (err) {
+    window.Pushy.register({ serviceWorker: '/pushy-service-worker.js' }).then((deviceToken: string) => {
+        // Registration successful, proceed to persist the token
+        console.log('Pushy device token received:', deviceToken);
+        console.log("Registering token on the server...");
+
+        // Persist the device token to your backend
+        return registerAdminDevice(deviceToken);
+    }).then(result => {
+      setIsLoading(false);
+      if (result.success) {
+        setIsRegistered(true);
+        console.log('Device token successfully registered on server.');
+        toast({
+          title: 'Success',
+          description: 'Push notifications have been enabled for this device.',
+        });
+      } else {
+        throw new Error(result.error || 'Server registration failed.');
+      }
+    }).catch((err: any) => {
+        // Handle registration errors
         console.error('Pushy registration error:', err);
         setIsLoading(false);
         toast({
           variant: 'destructive',
           title: 'Registration Failed',
           description: err.message || 'Could not register for notifications.',
-        });
-        return;
-      }
-
-      // Registration successful, proceed to persist the token
-      console.log('Pushy device token received:', deviceToken);
-      console.log("Registering token on the server...");
-
-      // Persist the device token to your backend
-      registerAdminDevice(deviceToken)
-        .then(result => {
-          setIsLoading(false);
-          if (result.success) {
-            setIsRegistered(true);
-            console.log('Device token successfully registered on server.');
-            toast({
-              title: 'Success',
-              description: 'Push notifications have been enabled for this device.',
-            });
-          } else {
-            throw new Error(result.error || 'Server registration failed.');
-          }
-        })
-        .catch(serverError => {
-          setIsLoading(false);
-          console.error('Server registration error:', serverError);
-          setIsRegistered(false); // Revert status on server failure
-          toast({
-            variant: 'destructive',
-            title: 'Server Error',
-            description: serverError.message || 'Could not save device token.',
-          });
         });
     });
   };
