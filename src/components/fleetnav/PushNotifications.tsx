@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
@@ -7,12 +8,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Bell, BellRing, Loader2 } from 'lucide-react';
 import { registerAdminDevice } from '@/app/actions/registerAdminDevice';
 
-declare global {
-  interface Window {
-    Pushy: any;
-  }
-}
-
 const PUSHY_APP_ID = '68e6aecbb7e2f9df7184b4df';
 
 export function PushNotifications() {
@@ -21,54 +16,74 @@ export function PushNotifications() {
   const [isPushyReady, setIsPushyReady] = useState(false);
   const { toast } = useToast();
 
-  const initializePushy = useCallback(() => {
-    if (!('serviceWorker' in navigator)) {
-      console.error('Service workers are not supported by this browser.');
+  const registerDevice = useCallback(async () => {
+    try {
+      const deviceToken = await window.Pushy.register();
+      const result = await registerAdminDevice(deviceToken);
+      if (result.success) {
+        setIsRegistered(true);
+        toast({
+          title: 'Success',
+          description: 'Push notifications have been enabled for this device.',
+        });
+      } else {
+        throw new Error(result.error || 'Server registration failed.');
+      }
+    } catch (err: any) {
+      setIsRegistered(false);
       toast({
         variant: 'destructive',
-        title: 'Browser Not Supported',
-        description: 'This browser does not support push notifications.',
+        title: 'Registration Failed',
+        description: err.message || 'Could not register for notifications. Please ensure you grant permission.',
       });
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    navigator.serviceWorker.register('/service-worker.js')
-      .then(() => {
-        console.log('Service Worker registered successfully.');
-
-        // Set App ID
-        window.Pushy.setAppId(PUSHY_APP_ID);
-
-        // Check registration status
-        window.Pushy.isRegistered((err: any, registered: boolean) => {
-          if (err) {
-            console.error('Pushy isRegistered check failed:', err);
-            toast({
-              variant: 'destructive',
-              title: 'Error',
-              description: 'Could not check notification status.',
-            });
-            setIsLoading(false);
-            return;
-          }
-          setIsRegistered(registered);
-          setIsPushyReady(true);
-          setIsLoading(false);
-        });
-      })
-      .catch((error: any) => {
-        console.error('Service Worker registration failed:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Critical Error',
-          description: `Could not register the notification service: ${error.message}`,
-        });
-        setIsLoading(false);
-      });
   }, [toast]);
 
   useEffect(() => {
+    // This entire effect runs only on the client
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const initializePushy = () => {
+      // Set the App ID
+      window.Pushy.setOptions({ appId: PUSHY_APP_ID });
+
+      // Register the service worker
+      window.Pushy.register()
+        .then(() => {
+          console.log('Pushy service worker registered.');
+          
+          // Check registration status
+          window.Pushy.isRegistered((err: any, registered: boolean) => {
+            if (err) {
+              console.error('Pushy isRegistered check failed:', err);
+              toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Could not check notification status.',
+              });
+              setIsLoading(false);
+              return;
+            }
+            setIsRegistered(registered);
+            setIsPushyReady(true);
+            setIsLoading(false);
+          });
+        })
+        .catch((err: any) => {
+          console.error('Service Worker registration failed:', err);
+          toast({
+            variant: 'destructive',
+            title: 'Critical Error',
+            description: `Could not register the notification service: ${err.message}`,
+          });
+          setIsLoading(false);
+        });
+    };
+
     // If Pushy is already loaded, initialize it.
     if (window.Pushy) {
       initializePushy();
@@ -79,18 +94,18 @@ export function PushNotifications() {
     const script = document.createElement('script');
     script.src = 'https://sdk.pushy.me/web/1.0.10/pushy-sdk.js';
     script.async = true;
-
+    
     // When the script loads, initialize Pushy.
     script.onload = initializePushy;
     
     script.onerror = () => {
-        console.error('Failed to load Pushy SDK script.');
-        toast({
-            variant: 'destructive',
-            title: 'Network Error',
-            description: 'Could not load the notification SDK. Please check your connection.',
-        });
-        setIsLoading(false);
+      console.error('Failed to load Pushy SDK script.');
+      toast({
+        variant: 'destructive',
+        title: 'Network Error',
+        description: 'Could not load the notification SDK. Please check your connection.',
+      });
+      setIsLoading(false);
     };
 
     document.head.appendChild(script);
@@ -101,7 +116,7 @@ export function PushNotifications() {
         document.head.removeChild(script);
       }
     };
-  }, [initializePushy, toast]);
+  }, [toast]);
 
   const handleEnableNotifications = () => {
     if (!isPushyReady) {
@@ -112,31 +127,8 @@ export function PushNotifications() {
       });
       return;
     }
-
     setIsLoading(true);
-    
-    window.Pushy.register().then(async (deviceToken: string) => {
-      const result: { success: boolean; error?: string } = await registerAdminDevice(deviceToken);
-
-      if (result.success) {
-        setIsRegistered(true);
-        toast({
-          title: 'Success',
-          description: 'Push notifications have been enabled for this device.',
-        });
-      } else {
-        throw new Error(result.error || 'Server registration failed.');
-      }
-    }).catch((err: any) => {
-      setIsRegistered(false);
-      toast({
-        variant: 'destructive',
-        title: 'Registration Failed',
-        description: err.message || 'Could not register for notifications. Please ensure you grant permission.',
-      });
-    }).finally(() => {
-      setIsLoading(false);
-    });
+    registerDevice();
   };
 
   return (
