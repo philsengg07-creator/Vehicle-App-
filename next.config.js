@@ -29,15 +29,6 @@ const nextConfig = {
       },
     ],
   },
-  async redirects() {
-    return [
-      {
-        source: '/firebase-messaging-sw.js',
-        destination: '/_',
-        permanent: false,
-      },
-    ]
-  },
 };
 
 module.exports = nextConfig;
