@@ -20,8 +20,6 @@ export function PushNotifications() {
   const { toast } = useToast();
   const pushyInitialized = useRef(false);
 
-  const PUSHY_APP_ID = '68e6aecbb7e2f9df7184b4df';
-
   useEffect(() => {
     if (pushyInitialized.current) return;
     pushyInitialized.current = true;
@@ -31,10 +29,7 @@ export function PushNotifications() {
     const initializePushy = () => {
       console.log("Pushy SDK found, proceeding with initialization.");
       
-      // Crucially, set the App ID first
-      window.Pushy.setAppId(PUSHY_APP_ID);
-
-      // Then, check registration status
+      // Check registration status
       window.Pushy.isRegistered((err: any, registered: boolean) => {
         setIsLoading(false);
         if (err) {
