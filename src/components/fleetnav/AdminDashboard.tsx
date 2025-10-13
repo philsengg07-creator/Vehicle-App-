@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from 'next/dynamic';
 import { Plus, Users } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import { TaxiCard } from "./TaxiCard";
@@ -9,7 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Taxi } from "@/types";
-import { PushNotifications } from "./PushNotifications";
+
+const PushNotifications = dynamic(() => import('./PushNotifications').then(mod => mod.PushNotifications), {
+  ssr: false,
+});
 
 export function AdminDashboard() {
   const { taxis, remainingEmployees, addTaxi, editTaxi } = useApp();
