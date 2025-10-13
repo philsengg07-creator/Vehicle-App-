@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Taxi } from "@/types";
 
-const PushNotifications = dynamic(() => import('./PushNotifications').then(mod => mod.PushNotifications), {
+const PushyClient = dynamic(() => import('./PushyClient').then(mod => mod.default), {
   ssr: false,
 });
 
@@ -88,7 +88,7 @@ export function AdminDashboard() {
             </CardContent>
           </Card>
           
-          <PushNotifications />
+          <PushyClient />
 
         </div>
 

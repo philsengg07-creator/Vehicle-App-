@@ -25,6 +25,7 @@ export default function PushyClient() {
             title: 'Unsupported Browser',
             description: 'Push notifications are not supported in this browser.',
         });
+        setIsLoading(false);
         return;
     }
     
