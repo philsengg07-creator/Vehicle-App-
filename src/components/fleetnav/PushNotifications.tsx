@@ -14,7 +14,7 @@ declare global {
 }
 
 // IMPORTANT: Replace with your actual Pushy App ID
-const PUSHY_APP_ID = process.env.NEXT_PUBLIC_PUSHY_APP_ID || 'YOUR_PUSHY_APP_ID_HERE';
+const PUSHY_APP_ID = process.env.NEXT_PUBLIC_PUSHY_APP_ID || '68e6aecbb7e2f9df7184b4df';
 
 export function PushNotifications() {
   const [isRegistered, setIsRegistered] = useState(false);
@@ -42,12 +42,12 @@ export function PushNotifications() {
       try {
         const registration = await navigator.serviceWorker.register('/service-worker.js');
         console.log('Service Worker registered successfully:', registration);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Service Worker registration failed:', error);
         toast({
           variant: 'destructive',
           title: 'Critical Error',
-          description: 'Could not register the notification service.',
+          description: `Could not register the notification service: ${error.message}`,
         });
         setIsLoading(false);
         return;
@@ -159,7 +159,7 @@ export function PushNotifications() {
             </>
           )}
         </Button>
-         {PUSHY_APP_ID === 'YOUR_PUSHY_APP_ID_HERE' && (
+         {!PUSHY_APP_ID && (
            <p className="text-xs text-destructive text-center mt-4">
              Pushy App ID is not configured.
            </p>
