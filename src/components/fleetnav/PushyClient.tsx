@@ -19,14 +19,34 @@ export default function PushyClient() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (typeof window === 'undefined' || window.Pushy) {
-        setIsLoading(false);
+    // Prevent script from running on server
+    if (typeof window === 'undefined') {
         return;
     }
 
+    // If script is already loaded by this component, don't load it again
+    if (window.Pushy) {
+        window.Pushy.isRegistered((err: any, registered: boolean) => {
+            if (err) return;
+            setIsRegistered(registered);
+            setIsLoading(false);
+        });
+        return;
+    }
+    
+    // Create script element
     const script = document.createElement('script');
+
+    // Set script cross-origin attribute
+    script.crossOrigin = 'anonymous';
+    
+    // Set script source
     script.src = 'https://sdk.pushy.me/web/pushy-sdk.js';
+
+    // Set script to async
     script.async = true;
+
+    // Script onload event listener
     script.onload = () => {
         if (!PUSHY_APP_ID) {
           console.error("Pushy App ID is not configured.");
@@ -59,6 +79,8 @@ export default function PushyClient() {
           setIsLoading(false);
         });
     };
+
+    // Script on-error event listener
     script.onerror = () => {
         console.error("Failed to load Pushy SDK script.");
         toast({
@@ -69,10 +91,11 @@ export default function PushyClient() {
         setIsLoading(false);
     };
 
+    // Append script to document head
     document.head.appendChild(script);
 
+    // Clean up script tag on component unmount
     return () => {
-      // Clean up the script tag if the component unmounts
       const existingScript = document.querySelector('script[src="https://sdk.pushy.me/web/pushy-sdk.js"]');
       if (existingScript) {
         document.head.removeChild(existingScript);
