@@ -22,6 +22,7 @@ export default function RootLayout({
         <script 
           src="https://sdk.pushy.me/web/1.0.10/pushy-sdk.js"
           async
+          suppressHydrationWarning
         ></script>
       </head>
       <body className="font-body antialiased">

@@ -13,8 +13,7 @@ declare global {
   }
 }
 
-// IMPORTANT: Replace with your actual Pushy App ID
-const PUSHY_APP_ID = process.env.NEXT_PUBLIC_PUSHY_APP_ID || '68e6aecbb7e2f9df7184b4df';
+const PUSHY_APP_ID = '68e6aecbb7e2f9df7184b4df';
 
 export function PushNotifications() {
   const [isRegistered, setIsRegistered] = useState(false);
@@ -23,9 +22,9 @@ export function PushNotifications() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // A robust, multi-step initialization process.
-    async function initialize() {
-      // Step 1: Ensure Service Workers are supported.
+    // This function runs only on the client side.
+    const initialize = async () => {
+      // 1. Ensure Service Workers are supported by the browser
       if (!('serviceWorker' in navigator)) {
         console.error('Service workers are not supported by this browser.');
         toast({
@@ -37,11 +36,10 @@ export function PushNotifications() {
         return;
       }
 
-      // Step 2: Manually register our service worker file.
-      // This is the most reliable way to ensure it's installed.
+      // 2. Manually register our service worker file
       try {
-        const registration = await navigator.serviceWorker.register('/service-worker.js');
-        console.log('Service Worker registered successfully:', registration);
+        await navigator.serviceWorker.register('/service-worker.js');
+        console.log('Service Worker registered successfully.');
       } catch (error: any) {
         console.error('Service Worker registration failed:', error);
         toast({
@@ -53,36 +51,40 @@ export function PushNotifications() {
         return;
       }
 
-      // Step 3: Wait for the Pushy SDK script (loaded in layout.tsx) to be ready.
+      // 3. Wait for the Pushy SDK script (loaded in layout.tsx) to be ready.
       const interval = setInterval(() => {
         if (typeof window.Pushy !== 'undefined') {
           clearInterval(interval);
           console.log('Pushy SDK is loaded.');
 
-          // Step 4: Configure Pushy with your App ID.
           try {
+            // 4. Configure Pushy with your App ID
             window.Pushy.setAppId(PUSHY_APP_ID);
             console.log('Pushy App ID set.');
-          } catch(e) {
-             console.error('Failed to set Pushy App ID', e);
-          }
 
-
-          // Step 5: Now that everything is set up, check if the device is already registered.
-          window.Pushy.isRegistered((err: any, registered: boolean) => {
-            if (err) {
-              console.error('Pushy isRegistered check failed:', err);
-            } else {
-              console.log('Pushy registration status:', registered);
-              setIsRegistered(registered);
-            }
-            // Final state updates
-            setIsPushyReady(true);
+            // 5. Now that everything is set up, check if the device is already registered.
+            window.Pushy.isRegistered((err: any, registered: boolean) => {
+              if (err) {
+                console.error('Pushy isRegistered check failed:', err);
+              } else {
+                setIsRegistered(registered);
+              }
+              // Final state updates
+              setIsPushyReady(true);
+              setIsLoading(false);
+            });
+          } catch (e: any) {
+            console.error('Failed during Pushy initialization:', e);
+            toast({
+              variant: 'destructive',
+              title: 'Initialization Error',
+              description: `Pushy SDK could not be configured: ${e.message}`,
+            });
             setIsLoading(false);
-          });
+          }
         }
       }, 100);
-    }
+    };
 
     initialize();
   }, [toast]);
@@ -98,16 +100,12 @@ export function PushNotifications() {
     }
 
     setIsLoading(true);
-    console.log("Starting Pushy registration process...");
     
     window.Pushy.register().then(async (deviceToken: string) => {
-      console.log('Pushy device token received:', deviceToken);
-      
       const result: { success: boolean; error?: string } = await registerAdminDevice(deviceToken);
 
       if (result.success) {
         setIsRegistered(true);
-        console.log('Device token successfully registered on server.');
         toast({
           title: 'Success',
           description: 'Push notifications have been enabled for this device.',
@@ -116,7 +114,6 @@ export function PushNotifications() {
         throw new Error(result.error || 'Server registration failed.');
       }
     }).catch((err: any) => {
-      console.error('Pushy registration error:', err);
       setIsRegistered(false);
       toast({
         variant: 'destructive',
@@ -159,11 +156,6 @@ export function PushNotifications() {
             </>
           )}
         </Button>
-         {!PUSHY_APP_ID && (
-           <p className="text-xs text-destructive text-center mt-4">
-             Pushy App ID is not configured.
-           </p>
-         )}
       </CardContent>
     </Card>
   );
