@@ -57,60 +57,37 @@ export function PushNotifications() {
       return;
     }
 
-    if (document.getElementById('pushy-sdk')) {
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.id = 'pushy-sdk';
-    script.src = 'https://sdk.pushy.me/web/1.0.10/pushy-sdk.js';
-    script.async = true;
-    document.head.appendChild(script);
-
-    // This function will poll until the Pushy SDK is fully initialized
     const waitForPushy = () => {
       const interval = setInterval(() => {
-        // Check for the object and the specific function we need
         if (window.Pushy && typeof window.Pushy.setOptions === 'function') {
           clearInterval(interval);
           initializePushy();
         }
-      }, 100); // Check every 100ms
+      }, 100);
     };
 
     const initializePushy = () => {
       try {
-        // Set the App ID - this is the correct place
-        window.Pushy.setOptions({ appId: PUSHY_APP_ID });
-  
-        // Register the service worker
-        navigator.serviceWorker.register('/service-worker.js')
-          .then(() => {
-            // Now that the SW is registered, check if the device is already registered
-            window.Pushy.isRegistered((err: any, registered: boolean) => {
-              if (err) {
-                console.error('Pushy isRegistered check failed:', err);
-                toast({
-                  variant: 'destructive',
-                  title: 'Error',
-                  description: 'Could not check push notification status.',
-                });
-                setIsLoading(false);
-                return;
-              }
-              setIsRegistered(registered);
-              setIsLoading(false);
-            });
-          })
-          .catch((err: any) => {
-            console.error('Service Worker registration failed:', err);
+        window.Pushy.setOptions({
+          serviceWorkerLocation: '/pushy-service-worker.js',
+          appId: PUSHY_APP_ID,
+        });
+
+        window.Pushy.isRegistered((err: any, registered: boolean) => {
+          if (err) {
+            console.error('Pushy isRegistered check failed:', err);
             toast({
               variant: 'destructive',
-              title: 'Critical Error',
-              description: `Could not register the notification service: ${err.message}`,
+              title: 'Error',
+              description: 'Could not check push notification status.',
             });
             setIsLoading(false);
-          });
+            return;
+          }
+          setIsRegistered(registered);
+          setIsLoading(false);
+        });
+
       } catch (err: any) {
         console.error('Error during Pushy initialization:', err);
         toast({
@@ -122,10 +99,9 @@ export function PushNotifications() {
       }
     };
     
-    // Start polling when the component mounts
     waitForPushy();
-
   }, [toast]);
+
 
   return (
     <PushNotificationsCard
