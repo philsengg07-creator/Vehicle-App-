@@ -95,39 +95,17 @@ export function PushNotifications() {
           setIsLoading(false);
         });
     };
-
-    // If Pushy is already loaded, initialize it.
-    if (window.Pushy) {
-      initializePushy();
-      return;
-    }
-
-    // Otherwise, dynamically load the Pushy script.
-    const script = document.createElement('script');
-    script.src = 'https://sdk.pushy.me/web/1.0.10/pushy-sdk.js';
-    script.async = true;
     
-    // When the script loads, initialize Pushy.
-    script.onload = initializePushy;
-    
-    script.onerror = () => {
-      console.error('Failed to load Pushy SDK script.');
-      toast({
-        variant: 'destructive',
-        title: 'Network Error',
-        description: 'Could not load the notification SDK.',
-      });
-      setIsLoading(false);
-    };
+    // Poll for the Pushy SDK to be ready
+    const interval = setInterval(() => {
+        if (window.Pushy) {
+            clearInterval(interval);
+            initializePushy();
+        }
+    }, 100);
 
-    document.head.appendChild(script);
+    return () => clearInterval(interval);
 
-    // Cleanup function to remove the script if the component unmounts.
-    return () => {
-      if (document.head.contains(script)) {
-        document.head.removeChild(script);
-      }
-    };
   }, [toast]);
 
   return (
