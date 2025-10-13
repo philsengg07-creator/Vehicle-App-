@@ -10,6 +10,13 @@ import { registerAdminDevice } from '@/app/actions/registerAdminDevice';
 
 const PUSHY_APP_ID = '68e6aecbb7e2f9df7184b4df';
 
+// Declare the Pushy object on the window for TypeScript
+declare global {
+  interface Window {
+    Pushy: any;
+  }
+}
+
 export function PushNotifications() {
   const [isRegistered, setIsRegistered] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -17,14 +24,19 @@ export function PushNotifications() {
   const { toast } = useToast();
 
   const registerDevice = useCallback(async () => {
+    setIsLoading(true);
     try {
+      // Register the user for push notifications
       const deviceToken = await window.Pushy.register();
+      
+      // Pass the token to the server
       const result = await registerAdminDevice(deviceToken);
+
       if (result.success) {
         setIsRegistered(true);
         toast({
           title: 'Success',
-          description: 'Push notifications have been enabled for this device.',
+          description: 'Push notifications enabled.',
         });
       } else {
         throw new Error(result.error || 'Server registration failed.');
@@ -34,7 +46,7 @@ export function PushNotifications() {
       toast({
         variant: 'destructive',
         title: 'Registration Failed',
-        description: err.message || 'Could not register for notifications. Please ensure you grant permission.',
+        description: err.message || 'Could not register for notifications.',
       });
     } finally {
       setIsLoading(false);
@@ -42,7 +54,7 @@ export function PushNotifications() {
   }, [toast]);
 
   useEffect(() => {
-    // This entire effect runs only on the client
+    // This effect runs only on the client
     if (typeof window === 'undefined') {
       return;
     }
@@ -52,7 +64,7 @@ export function PushNotifications() {
       window.Pushy.setOptions({ appId: PUSHY_APP_ID });
 
       // Register the service worker
-      window.Pushy.register()
+      navigator.serviceWorker.register('/service-worker.js')
         .then(() => {
           console.log('Pushy service worker registered.');
           
@@ -103,7 +115,7 @@ export function PushNotifications() {
       toast({
         variant: 'destructive',
         title: 'Network Error',
-        description: 'Could not load the notification SDK. Please check your connection.',
+        description: 'Could not load the notification SDK.',
       });
       setIsLoading(false);
     };
@@ -117,19 +129,6 @@ export function PushNotifications() {
       }
     };
   }, [toast]);
-
-  const handleEnableNotifications = () => {
-    if (!isPushyReady) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Notification service is not available yet. Please wait.',
-      });
-      return;
-    }
-    setIsLoading(true);
-    registerDevice();
-  };
 
   return (
     <Card>
@@ -145,7 +144,7 @@ export function PushNotifications() {
       <CardContent>
         <Button
           className="w-full"
-          onClick={handleEnableNotifications}
+          onClick={registerDevice}
           disabled={isLoading || isRegistered || !isPushyReady}
         >
           {isLoading ? (
