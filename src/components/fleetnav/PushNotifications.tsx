@@ -13,7 +13,7 @@ declare global {
   }
 }
 
-export default function PushNotifications() {
+export function PushNotifications() {
   const [isRegistered, setIsRegistered] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -22,7 +22,7 @@ export default function PushNotifications() {
     setIsLoading(true);
     try {
       if (!window.Pushy) {
-        throw new Error('Pushy SDK not loaded.');
+        throw new Error('Pushy SDK not ready.');
       }
       const deviceToken = await window.Pushy.register();
       const result = await registerAdminDevice(deviceToken);
@@ -57,6 +57,11 @@ export default function PushNotifications() {
     }
 
     if (document.getElementById('pushy-sdk')) {
+        // If script is already there, maybe it's loaded or loading.
+        if (window.Pushy) {
+             // If already loaded, proceed
+             initializePushy();
+        }
         return;
     }
 
@@ -64,38 +69,7 @@ export default function PushNotifications() {
     script.id = 'pushy-sdk';
     script.src = 'https://sdk.pushy.me/web/1.0.10/pushy-sdk.js';
     script.async = true;
-
-    script.onload = () => {
-      if (!window.Pushy) {
-        console.error('Pushy SDK loaded but window.Pushy is not available.');
-        setIsLoading(false);
-        return;
-      }
-      
-      window.Pushy.setOptions({ appId: PUSHY_APP_ID });
-
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(() => {
-          window.Pushy.isRegistered((err: any, registered: boolean) => {
-            if (err) {
-              console.error('Pushy isRegistered check failed:', err);
-              setIsLoading(false);
-              return;
-            }
-            setIsRegistered(registered);
-            setIsLoading(false);
-          });
-        })
-        .catch((err: any) => {
-          console.error('Service Worker registration failed:', err);
-          toast({
-            variant: 'destructive',
-            title: 'Critical Error',
-            description: `Could not register the notification service: ${err.message}`,
-          });
-          setIsLoading(false);
-        });
-    };
+    script.onload = initializePushy;
     
     script.onerror = () => {
         console.error('Failed to load Pushy SDK script.');
@@ -108,6 +82,38 @@ export default function PushNotifications() {
     }
 
     document.head.appendChild(script);
+
+    function initializePushy() {
+        if (!window.Pushy) {
+          console.error('Pushy SDK loaded but window.Pushy is not available.');
+          setIsLoading(false);
+          return;
+        }
+        
+        window.Pushy.setOptions({ appId: PUSHY_APP_ID });
+  
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(() => {
+            window.Pushy.isRegistered((err: any, registered: boolean) => {
+              if (err) {
+                console.error('Pushy isRegistered check failed:', err);
+                setIsLoading(false);
+                return;
+              }
+              setIsRegistered(registered);
+              setIsLoading(false);
+            });
+          })
+          .catch((err: any) => {
+            console.error('Service Worker registration failed:', err);
+            toast({
+              variant: 'destructive',
+              title: 'Critical Error',
+              description: `Could not register the notification service: ${err.message}`,
+            });
+            setIsLoading(false);
+          });
+      };
 
   }, [toast]);
 
