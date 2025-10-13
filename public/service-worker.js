@@ -1,4 +1,4 @@
-
-// This file is intentionally blank.
-// The Pushy SDK will dynamically generate its service worker content.
-// We just need this file to exist to satisfy the service worker registration.
+// This file is intentionally left blank. 
+// The Pushy SDK will automatically create and manage its own service worker.
+// Do not delete this file, as its presence is required for the service worker
+// registration to succeed in some browsers.
