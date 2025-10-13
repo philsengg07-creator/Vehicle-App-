@@ -23,12 +23,14 @@ export function PushNotifications() {
   const PUSHY_APP_ID = '68e6aecbb7e2f9df7184b4df';
 
   useEffect(() => {
+    // Prevent this effect from running more than once
     if (pushyInitialized.current) return;
+    pushyInitialized.current = true;
+    
+    console.log("Pushy SDK Initializing...");
 
     const initPushy = () => {
-      console.log("Pushy SDK Initializing...");
-      pushyInitialized.current = true;
-      
+      // Check if device is already registered
       window.Pushy.isRegistered((err: any, registered: boolean) => {
         setIsLoading(false);
         if (err) {
@@ -40,11 +42,8 @@ export function PushNotifications() {
       });
     };
     
-    if (typeof window.Pushy !== 'undefined') {
-      console.log("Pushy SDK already loaded.");
-      initPushy();
-    } else {
-      console.log("Pushy SDK not loaded yet, waiting...");
+    // Wait until Pushy SDK script loads
+    if (typeof window.Pushy === 'undefined') {
       const interval = setInterval(() => {
         if (window.Pushy) {
           clearInterval(interval);
@@ -53,6 +52,9 @@ export function PushNotifications() {
         }
       }, 500);
       return () => clearInterval(interval);
+    } else {
+      console.log("Pushy SDK already loaded.");
+      initPushy();
     }
   }, []);
 
@@ -69,7 +71,11 @@ export function PushNotifications() {
     setIsLoading(true);
     console.log("Starting notification registration process...");
     
+    // Register the device for push notifications
     window.Pushy.register((err: any, deviceToken: string) => {
+      setIsLoading(false);
+
+      // Handle registration errors
       if (err) {
         console.error('Pushy registration error:', err);
         toast({
@@ -77,13 +83,14 @@ export function PushNotifications() {
           title: 'Registration Failed',
           description: err.message || 'Could not register for notifications.',
         });
-        setIsLoading(false);
         return;
       }
 
+      // Registration successful, proceed to persist the token
       console.log('Pushy device token received:', deviceToken);
       console.log("Registering token on the server...");
 
+      // Persist the device token to your backend
       registerAdminDevice(deviceToken)
         .then(result => {
           if (result.success) {
@@ -99,16 +106,13 @@ export function PushNotifications() {
         })
         .catch(serverError => {
           console.error('Server registration error:', serverError);
-          setIsRegistered(false); // Rollback state
+          // Optional: You might want to unregister from Pushy if your backend fails
+          setIsRegistered(false);
           toast({
             variant: 'destructive',
             title: 'Server Error',
             description: serverError.message || 'Could not save device token.',
           });
-        })
-        .finally(() => {
-          setIsLoading(false);
-          console.log('Notification registration process finished.');
         });
     });
   };
