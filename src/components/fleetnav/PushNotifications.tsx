@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useRef } from 'react';
@@ -22,17 +23,12 @@ export function PushNotifications() {
   const PUSHY_APP_ID = '68e6aecbb7e2f9df7184b4df';
 
   useEffect(() => {
-    // Prevent re-initialization on re-renders
-    if (pushyInitialized.current) {
-        setIsLoading(false);
-        return;
-    };
+    if (pushyInitialized.current) return;
 
     const initPushy = () => {
       console.log("Pushy SDK Initializing...");
       pushyInitialized.current = true;
       
-      // Check if already registered
       window.Pushy.isRegistered((err: any, registered: boolean) => {
         setIsLoading(false);
         if (err) {
@@ -44,8 +40,10 @@ export function PushNotifications() {
       });
     };
     
-    // Wait until Pushy SDK script loads
-    if (typeof window.Pushy === 'undefined') {
+    if (typeof window.Pushy !== 'undefined') {
+      console.log("Pushy SDK already loaded.");
+      initPushy();
+    } else {
       console.log("Pushy SDK not loaded yet, waiting...");
       const interval = setInterval(() => {
         if (window.Pushy) {
@@ -55,11 +53,8 @@ export function PushNotifications() {
         }
       }, 500);
       return () => clearInterval(interval);
-    } else {
-      console.log("Pushy SDK already loaded.");
-      initPushy();
     }
-  }, []); // Empty dependency array to run only once on mount
+  }, []);
 
   const handleEnableNotifications = () => {
     if (!window.Pushy) {
