@@ -13,6 +13,9 @@ declare global {
   }
 }
 
+// IMPORTANT: Replace with your actual Pushy App ID
+const PUSHY_APP_ID = process.env.NEXT_PUBLIC_PUSHY_APP_ID || 'YOUR_PUSHY_APP_ID_HERE';
+
 export function PushNotifications() {
   const [isRegistered, setIsRegistered] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -20,10 +23,9 @@ export function PushNotifications() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // This function will handle the entire initialization flow.
-    const initialize = () => {
-      // 1. Manually register the service worker.
-      // This is the most robust way to ensure it's active.
+    // A robust, multi-step initialization process.
+    async function initialize() {
+      // Step 1: Ensure Service Workers are supported.
       if (!('serviceWorker' in navigator)) {
         console.error('Service workers are not supported by this browser.');
         toast({
@@ -35,52 +37,62 @@ export function PushNotifications() {
         return;
       }
 
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(registration => {
-          console.log('Service Worker registered successfully:', registration);
-
-          // 2. Wait for the Pushy SDK script to be loaded.
-          const interval = setInterval(() => {
-            if (typeof window.Pushy !== 'undefined') {
-              clearInterval(interval);
-              console.log('Pushy SDK is loaded.');
-              setIsPushyReady(true);
-
-              // 3. Now that the SDK is ready, check registration status.
-              window.Pushy.isRegistered((err: any, registered: boolean) => {
-                if (err) {
-                  console.error('Pushy isRegistered check failed:', err);
-                  setIsLoading(false);
-                  return;
-                }
-                setIsRegistered(registered);
-                setIsLoading(false);
-                console.log('Pushy registration status:', registered);
-              });
-            }
-          }, 100); // Check every 100ms
-        })
-        .catch(error => {
-          console.error('Service Worker registration failed:', error);
-          toast({
-            variant: 'destructive',
-            title: 'Critical Error',
-            description: 'Could not register notification service worker.',
-          });
-          setIsLoading(false);
+      // Step 2: Manually register our service worker file.
+      // This is the most reliable way to ensure it's installed.
+      try {
+        const registration = await navigator.serviceWorker.register('/service-worker.js');
+        console.log('Service Worker registered successfully:', registration);
+      } catch (error) {
+        console.error('Service Worker registration failed:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Critical Error',
+          description: 'Could not register the notification service.',
         });
-    };
+        setIsLoading(false);
+        return;
+      }
+
+      // Step 3: Wait for the Pushy SDK script (loaded in layout.tsx) to be ready.
+      const interval = setInterval(() => {
+        if (typeof window.Pushy !== 'undefined') {
+          clearInterval(interval);
+          console.log('Pushy SDK is loaded.');
+
+          // Step 4: Configure Pushy with your App ID.
+          try {
+            window.Pushy.setAppId(PUSHY_APP_ID);
+            console.log('Pushy App ID set.');
+          } catch(e) {
+             console.error('Failed to set Pushy App ID', e);
+          }
+
+
+          // Step 5: Now that everything is set up, check if the device is already registered.
+          window.Pushy.isRegistered((err: any, registered: boolean) => {
+            if (err) {
+              console.error('Pushy isRegistered check failed:', err);
+            } else {
+              console.log('Pushy registration status:', registered);
+              setIsRegistered(registered);
+            }
+            // Final state updates
+            setIsPushyReady(true);
+            setIsLoading(false);
+          });
+        }
+      }, 100);
+    }
 
     initialize();
   }, [toast]);
-
 
   const handleEnableNotifications = () => {
     if (!isPushyReady) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Notification service is not available. Please refresh.',
+        description: 'Notification service is not available yet. Please wait a moment.',
       });
       return;
     }
@@ -93,7 +105,6 @@ export function PushNotifications() {
       
       const result: { success: boolean; error?: string } = await registerAdminDevice(deviceToken);
 
-      setIsLoading(false);
       if (result.success) {
         setIsRegistered(true);
         console.log('Device token successfully registered on server.');
@@ -106,13 +117,14 @@ export function PushNotifications() {
       }
     }).catch((err: any) => {
       console.error('Pushy registration error:', err);
-      setIsLoading(false);
-      setIsRegistered(false); // Ensure UI reflects registration failure
+      setIsRegistered(false);
       toast({
         variant: 'destructive',
         title: 'Registration Failed',
         description: err.message || 'Could not register for notifications. Please ensure you grant permission.',
       });
+    }).finally(() => {
+        setIsLoading(false);
     });
   };
 
@@ -147,6 +159,11 @@ export function PushNotifications() {
             </>
           )}
         </Button>
+         {PUSHY_APP_ID === 'YOUR_PUSHY_APP_ID_HERE' && (
+           <p className="text-xs text-destructive text-center mt-4">
+             Pushy App ID is not configured.
+           </p>
+         )}
       </CardContent>
     </Card>
   );
