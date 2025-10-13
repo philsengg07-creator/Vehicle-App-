@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -24,7 +25,7 @@ export function PushNotifications() {
     // Function to check for Pushy and then check registration
     const initializePushy = () => {
       if (window.Pushy) {
-        window.Pushy.setAppId(PUSHY_APP_ID);
+        // No need to create an instance here, just check registration
         window.Pushy.isRegistered((err: any, registered: boolean) => {
           setIsLoading(false);
           if (err) {
@@ -53,9 +54,14 @@ export function PushNotifications() {
 
     setIsLoading(true);
     try {
+      // Create a new Pushy instance with your App ID
+      const pushy = new window.Pushy(PUSHY_APP_ID, {
+        serviceWorkerLocation: '/service-worker.js',
+      });
+      
       // Use a promise to handle the callback-based registration
       const deviceToken = await new Promise<string>((resolve, reject) => {
-        window.Pushy.register((err: any, token: string) => {
+        pushy.register((err: any, token: string) => {
           if (err) {
             return reject(err);
           }
