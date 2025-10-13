@@ -69,7 +69,7 @@ export function PushNotifications() {
 
       // Call your server-side action to store the token
       return registerAdminDevice(deviceToken);
-    }).then(result => {
+    }).then((result: { success: boolean; error?: string }) => {
       setIsLoading(false);
       if (result.success) {
         setIsRegistered(true);
