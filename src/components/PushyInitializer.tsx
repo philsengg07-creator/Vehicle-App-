@@ -17,15 +17,6 @@ export function PushyInitializer() {
       return;
     }
     
-    // Register the service worker
-    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-      navigator.serviceWorker
-        .register("/pushy-service-worker.js")
-        .then(() => console.log("✅ Pushy service worker registered"))
-        .catch(err => console.error("❌ Service worker registration failed:", err));
-    }
-
-
     // Wait until Pushy SDK is available
     async function initPushy() {
       // Check if Pushy is loaded on the window object
