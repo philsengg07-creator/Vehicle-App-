@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
-import Script from 'next/script';
+import { PushyInitializer } from '@/components/PushyInitializer';
 
 export const metadata: Metadata = {
   title: 'Vahicle App',
@@ -23,6 +23,7 @@ export default function RootLayout({
       <body className="font-body antialiased">
         {children}
         <Toaster />
+        <PushyInitializer />
       </body>
     </html>
   );

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import dynamic from 'next/dynamic';
 import { Plus, Users } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import { TaxiCard } from "./TaxiCard";
@@ -10,15 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Taxi } from "@/types";
-
-const PushyClient = dynamic(() => import('./PushyClient'), {
-  ssr: false,
-});
+import { registerAdminDevice } from "@/app/actions/registerAdminDevice";
+import { useToast } from "@/hooks/use-toast";
 
 export function AdminDashboard() {
   const { taxis, remainingEmployees, addTaxi, editTaxi } = useApp();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTaxi, setEditingTaxi] = useState<Taxi | undefined>(undefined);
+  const { toast } = useToast();
 
   const handleOpenForm = (taxi?: Taxi) => {
     setEditingTaxi(taxi);
@@ -37,6 +35,35 @@ export function AdminDashboard() {
       addTaxi(data);
     }
     handleCloseForm();
+  };
+
+  const enableNotifications = () => {
+    if (typeof window !== "undefined" && "Pushy" in window) {
+      const Pushy = (window as any).Pushy;
+      Pushy.register()
+        .then(async (deviceToken: string) => {
+          console.log("Pushy device token:", deviceToken);
+          await registerAdminDevice(deviceToken);
+          toast({
+            title: "Success",
+            description: "Push notifications enabled for this device.",
+          });
+        })
+        .catch((err: Error) => {
+          console.error("Pushy registration failed:", err);
+          toast({
+            variant: "destructive",
+            title: "Registration Failed",
+            description: err.message,
+          });
+        });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Pushy SDK not loaded yet. Please try again in a moment.",
+      });
+    }
   };
 
   return (
@@ -88,7 +115,16 @@ export function AdminDashboard() {
             </CardContent>
           </Card>
           
-          <PushyClient />
+          <Card>
+            <CardHeader>
+              <CardTitle>Push Notifications</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button className="w-full" onClick={enableNotifications}>
+                Enable Notifications
+              </Button>
+            </CardContent>
+          </Card>
 
         </div>
 
