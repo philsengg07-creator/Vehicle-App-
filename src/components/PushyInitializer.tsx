@@ -33,9 +33,14 @@ export function PushyInitializer() {
           await Notification.requestPermission();
         }
 
+        const pushyAppId = process.env.NEXT_PUBLIC_PUSHY_APP_ID;
+        if (!pushyAppId) {
+          console.error("❌ Pushy App ID is not configured. Please set NEXT_PUBLIC_PUSHY_APP_ID in your .env file.");
+          return;
+        }
+
         // Register the device for push notifications using the newer SDK method
-        // 🔹 This is your actual Pushy App ID from the Pushy Dashboard
-        const deviceToken = await Pushy.register({ appId: "668b8e05fdf91929a73373b5" });
+        const deviceToken = await Pushy.register({ appId: pushyAppId });
 
         console.log("✅ Pushy device registered successfully!");
         console.log("Device Token:", deviceToken);

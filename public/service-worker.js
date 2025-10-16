@@ -1,2 +1,2 @@
-// Import the Pushy service worker script
-importScripts('https://sdk.pushy.me/web/pushy-service-worker.js');
+// Load Pushy’s local service worker
+importScripts('/pushy-service-worker.js');
