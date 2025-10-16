@@ -216,6 +216,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         read: false,
       };
       await set(newNotificationRef, newNotification);
+      
+      // Trigger the push notification to the admin
       await sendPushyNotification(message);
   };
 
