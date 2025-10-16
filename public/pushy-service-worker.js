@@ -1,3 +1,4 @@
+
 // Listen for incoming push notifications
 self.addEventListener('push', function (event) {
     // Extract payload as JSON object, default to empty object
@@ -37,31 +38,11 @@ self.addEventListener('push', function (event) {
     });
 });
 
-// Listen for notification click
+// Listen for notification click event
 self.addEventListener('notificationclick', function (event) {
-    // Hide the notification
+    // Hide notification
     event.notification.close();
 
-    // Attempt to extract the URL from the notification's data
-    var url = event.notification.data.url;
-
-    // If a URL was specified
-    if (url) {
-        // Focus the browser tab with this URL
-        event.waitUntil(clients.matchAll({ type: 'window' }).then(function (clientList) {
-            for (var i = 0; i < clientList.length; i++) {
-                var client = clientList[i];
-
-                // If we found a matching client
-                if (client.url === url && 'focus' in client) {
-                    return client.focus();
-                }
-            }
-
-            // Otherwise, open a new tab
-            if (clients.openWindow) {
-                return clients.openWindow(url);
-            }
-        }));
-    }
+    // Attempt to open the an app window
+    event.waitUntil(clients.openWindow(event.notification.data.url || '/'));
 });
