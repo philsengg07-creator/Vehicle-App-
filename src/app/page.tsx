@@ -7,6 +7,7 @@ import { AdminDashboard } from '@/components/fleetnav/AdminDashboard';
 import { EmployeeDashboard } from '@/components/fleetnav/EmployeeDashboard';
 import { RoleSelection } from '@/components/fleetnav/RoleSelection';
 import { Loader2 } from 'lucide-react';
+import { PushyInitializer } from '@/components/PushyInitializer';
 
 function FleetNavApp() {
   const { role, currentEmployeeId, isLoading } = useApp();
@@ -26,6 +27,7 @@ function FleetNavApp() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <PushyInitializer />
       <Header />
       <main className="container mx-auto px-4">
         {role === 'admin' ? <AdminDashboard /> : <EmployeeDashboard />}

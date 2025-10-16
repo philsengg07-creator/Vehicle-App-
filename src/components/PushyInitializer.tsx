@@ -1,13 +1,23 @@
-
-'use client';
+"use client";
 
 import { useEffect } from "react";
 import Script from "next/script";
 import { registerAdminDevice } from "@/app/actions/registerAdminDevice";
+import { useApp } from "@/hooks/use-app";
+
+// Declare Pushy on the window object
+declare const Pushy: any;
 
 export function PushyInitializer() {
+  const { role } = useApp();
+
   useEffect(() => {
-    // Register service worker
+    // Only run this logic for admins
+    if (role !== 'admin') {
+      return;
+    }
+    
+    // Register the service worker
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
       navigator.serviceWorker
         .register("/pushy-service-worker.js")
@@ -15,44 +25,56 @@ export function PushyInitializer() {
         .catch(err => console.error("❌ Service worker registration failed:", err));
     }
 
-    const handleSDKLoad = () => {
-      if (typeof window !== 'undefined') {
-        const Pushy = (window as any).Pushy;
-        if (!Pushy) {
-          console.error("Pushy SDK not found on window after script load.");
-          return;
+
+    // Wait until Pushy SDK is available
+    async function initPushy() {
+      // Check if Pushy is loaded on the window object
+      if (typeof Pushy === "undefined") {
+        console.warn("⏳ Pushy not loaded yet, waiting...");
+        setTimeout(initPushy, 1000); // Check again in 1 second
+        return;
+      }
+
+      try {
+        // 🔹 Replace this with your actual Pushy App ID from the Pushy Dashboard
+        Pushy.setAppId("668b8e05fdf91929a73373b5");
+
+        // Check notification permission status
+        if (Notification.permission === "default") {
+          // Request permission if it's not granted or denied
+          await Notification.requestPermission();
         }
 
-        // Request notification permission
-        Notification.requestPermission().then((perm) => {
-          if (perm === "granted") {
-            // This is just to confirm Pushy is loaded.
-            // The actual registration will happen on button click in the admin dashboard.
-            console.log('Pushy SDK loaded and ready.');
-          }
-        });
+        // Register the device for push notifications
+        const deviceToken = await Pushy.register();
+
+        console.log("✅ Pushy device registered successfully!");
+        console.log("Device Token:", deviceToken);
+
+        // Send the device token to your backend to be saved
+        await registerAdminDevice(deviceToken);
+
+      } catch (err) {
+        // Log any errors that occur during registration
+        console.error("❌ Pushy registration failed:", err);
       }
-    };
-    
-    // The script tag has an onLoad prop, but we'll also check manually
-    // in case the component mounts after the script has already loaded.
-    if (typeof window !== 'undefined' && (window as any).Pushy) {
-      handleSDKLoad();
     }
 
-  }, []);
+    // Start the initialization process
+    initPushy();
+  }, [role]); // Rerun the effect if the user role changes
+
+  // Only render the script tag if the user is an admin
+  if (role !== 'admin') {
+    return null;
+  }
 
   return (
-    <Script 
-      src="https://sdk.pushy.me/web/1.0.9/pushy-sdk.js" 
-      strategy="lazyOnload"
-      onLoad={() => {
-        console.log('Pushy SDK script has loaded via next/script.');
-        // The effect hook will handle the rest
-      }}
-      onError={(e) => {
-        console.error("Failed to load Pushy SDK script:", e);
-      }}
+    <Script
+      src="https://sdk.pushy.me/web/1.0.9/pushy-sdk.js"
+      strategy="afterInteractive"
+      onLoad={() => console.log("✅ Pushy SDK script loaded")}
+      onError={(e) => console.error("❌ Failed to load Pushy SDK", e)}
     />
   );
 }

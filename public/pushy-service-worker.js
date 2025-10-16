@@ -1,4 +1,3 @@
-
 // Listen for incoming push notifications
 self.addEventListener('push', function (event) {
     // Extract payload as JSON object, default to empty object
@@ -36,13 +35,4 @@ self.addEventListener('push', function (event) {
             client.postMessage(data, [new MessageChannel().port2]);
         });
     });
-});
-
-// Listen for notification click event
-self.addEventListener('notificationclick', function (event) {
-    // Hide notification
-    event.notification.close();
-
-    // Attempt to open the an app window
-    event.waitUntil(clients.openWindow(event.notification.data.url || '/'));
 });
