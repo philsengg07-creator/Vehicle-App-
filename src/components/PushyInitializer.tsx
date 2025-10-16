@@ -36,17 +36,15 @@ export function PushyInitializer() {
       }
 
       try {
-        // 🔹 Replace this with your actual Pushy App ID from the Pushy Dashboard
-        Pushy.setAppId("668b8e05fdf91929a73373b5");
-
         // Check notification permission status
         if (Notification.permission === "default") {
           // Request permission if it's not granted or denied
           await Notification.requestPermission();
         }
 
-        // Register the device for push notifications
-        const deviceToken = await Pushy.register();
+        // Register the device for push notifications using the newer SDK method
+        // 🔹 This is your actual Pushy App ID from the Pushy Dashboard
+        const deviceToken = await Pushy.register({ appId: "668b8e05fdf91929a73373b5" });
 
         console.log("✅ Pushy device registered successfully!");
         console.log("Device Token:", deviceToken);
