@@ -25,6 +25,17 @@ function formatTimeToAMPM(time: string) {
     return `${formattedHours}:${formattedMinutes} ${ampm}`;
 }
 
+function formatBookingTime(isoString: string) {
+    const date = new Date(isoString);
+    return date.toLocaleString(undefined, { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+    });
+}
+
 export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
   const { role, bookSeat, deleteTaxi, currentEmployeeId } = useApp();
   
@@ -82,8 +93,9 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
         {taxi.bookings.length > 0 ? (
           <ul className="space-y-2 pt-4">
             {taxi.bookings.map((booking) => (
-              <li key={booking.id} className="flex items-center text-sm p-3 bg-secondary rounded-md font-medium">
-                {booking.employeeId}
+              <li key={booking.id} className="flex items-center justify-between text-sm p-3 bg-secondary rounded-md font-medium">
+                <span>{booking.employeeId}</span>
+                <span className="text-xs text-muted-foreground">{formatBookingTime(booking.bookingTime)}</span>
               </li>
             ))}
           </ul>

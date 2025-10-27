@@ -15,7 +15,7 @@ export interface Booking {
   taxiId: string;
   taxiName: string;
   employeeId: string;
-  bookingTime: string; // Changed to string to match Firebase RTDB
+  bookingTime: string;
 }
 
 export interface AppNotification {
