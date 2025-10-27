@@ -1,14 +1,18 @@
+
 "use client";
 
 import { useState } from "react";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, History } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import { TaxiCard } from "./TaxiCard";
 import { TaxiForm, type TaxiFormValues } from "./TaxiForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { Taxi } from "@/types";
+import { BookingHistory } from "./BookingHistory";
+import { ScrollArea } from "../ui/scroll-area";
+
 
 export function AdminDashboard() {
   const { taxis, remainingEmployees, addTaxi, editTaxi } = useApp();
@@ -62,6 +66,30 @@ export function AdminDashboard() {
           </div>
           
           <div className="lg:col-span-1 space-y-8">
+             <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <History />
+                        Booking History
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="w-full">View Full History</Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                                <DialogTitle>Booking History</DialogTitle>
+                            </DialogHeader>
+                            <ScrollArea className="h-[60vh] pr-4">
+                                <BookingHistory />
+                            </ScrollArea>
+                        </DialogContent>
+                    </Dialog>
+                </CardContent>
+            </Card>
+
             <Card className="sticky top-20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -101,3 +129,4 @@ export function AdminDashboard() {
     </>
   );
 }
+

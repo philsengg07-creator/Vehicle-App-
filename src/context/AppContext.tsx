@@ -20,7 +20,6 @@ async function resetData() {
         updates[`/taxis/${taxiId}/bookedSeats`] = 0;
         updates[`/taxis/${taxiId}/bookings`] = null;
         updates[`/taxis/${taxiId}/status`] = 'open';
-        updates[`/taxis/${taxiId}/bookingDeadline`] = "";
       }
     }
 
@@ -122,7 +121,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         if (!lastResetTimestamp) {
           console.log("First time run, setting reset timestamp.");
-          await resetData();
+          // Don't reset on the very first run, just set the timestamp
+          await set(lastResetRef, now.toISOString());
         } else {
           const lastResetDate = new Date(lastResetTimestamp).toDateString();
           const todayDate = now.toDateString();
@@ -290,15 +290,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return;
     }
     
+    const now = new Date();
+    const bookingTimestamp = now.toISOString();
+    
+    // 1. Add to the daily, resettable booking list for the taxi
     const bookingsRef = ref(db, `taxis/${taxiId}/bookings`);
     const newBookingRef = push(bookingsRef);
     const newBooking: Omit<Booking, 'id'> = {
         taxiId,
         taxiName: taxi.name,
         employeeId: currentEmployeeId,
-        bookingTime: new Date().toISOString()
+        bookingTime: bookingTimestamp
     };
     await set(newBookingRef, newBooking);
+
+    // 2. Add to the permanent booking history
+    const historyDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const historyRef = ref(db, `bookingHistory/${historyDate}`);
+    const newHistoryBookingRef = push(historyRef);
+    await set(newHistoryBookingRef, newBooking);
     
     const updatedBookedSeats = (taxi.bookedSeats || 0) + 1;
     await update(taxiRef, { bookedSeats: updatedBookedSeats });
