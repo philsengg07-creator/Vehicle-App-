@@ -119,13 +119,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const snapshot = await get(lastResetRef);
         const lastResetTimestamp = snapshot.val();
         const now = new Date();
-        const oneDay = 24 * 60 * 60 * 1000;
 
-        if (!lastResetTimestamp || (now.getTime() - new Date(lastResetTimestamp).getTime() > oneDay)) {
-          console.log("Resetting application data...");
+        if (!lastResetTimestamp) {
+          console.log("First time run, setting reset timestamp.");
           await resetData();
         } else {
-          console.log("Skipping automatic data reset.");
+          const lastResetDate = new Date(lastResetTimestamp).toDateString();
+          const todayDate = now.toDateString();
+          
+          if (lastResetDate !== todayDate) {
+            console.log("New day detected, resetting application data...");
+            await resetData();
+          } else {
+            console.log("Skipping automatic data reset.");
+          }
         }
       } catch (error) {
         console.error("Failed during app initialization check:", error);
