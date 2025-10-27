@@ -173,34 +173,52 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
             </AlertDialog>
           </div>
         ) : (
-          <Button
-            onClick={handleBookClick}
-            disabled={isBookedByCurrentUser || isBookingClosed}
-            className="w-full transition-all"
-            variant={isBookedByCurrentUser ? "secondary" : "default"}
-          >
-            {isBookedByCurrentUser ? (
-              <>
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Booked
-              </>
-            ) : isBookingClosed ? (
-              <>
-                  <Clock className="mr-2 h-4 w-4"/>
-                  Booking Closed
-              </>
-            ) : isFull ? (
-                <>
-                    <Car className="mr-2 h-4 w-4"/>
-                    Join Waiting List
-                </>
-            ) : (
-                <>
-                    <Car className="mr-2 h-4 w-4"/>
-                    Book a Seat
-                </>
-            )}
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+                <Button
+                    disabled={isBookedByCurrentUser || isBookingClosed}
+                    className="w-full transition-all"
+                    variant={isBookedByCurrentUser ? "secondary" : "default"}
+                >
+                    {isBookedByCurrentUser ? (
+                    <>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Booked
+                    </>
+                    ) : isBookingClosed ? (
+                    <>
+                        <Clock className="mr-2 h-4 w-4"/>
+                        Booking Closed
+                    </>
+                    ) : isFull ? (
+                        <>
+                            <Car className="mr-2 h-4 w-4"/>
+                            Join Waiting List
+                        </>
+                    ) : (
+                        <>
+                            <Car className="mr-2 h-4 w-4"/>
+                            Book a Seat
+                        </>
+                    )}
+                </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Confirm Booking</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        {isFull
+                            ? `This taxi is full. Do you want to join the waiting list for "${taxi.name}"?`
+                            : `Are you sure you want to book a seat in "${taxi.name}"?`
+                        }
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleBookClick}>Confirm</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
       </CardFooter>
     </Card>
