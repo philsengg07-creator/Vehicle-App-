@@ -24,11 +24,11 @@ export async function sendPushyNotification(message: string) {
     const payload = {
       to: deviceToken,
       data: {
-        title: 'Vahicle App Notification',
+        title: 'Vehicle App Notification',
         message: message,
       },
       notification: {
-        title: 'Vahicle App',
+        title: 'Vehicle App',
         body: message,
         badge: 1,
         sound: 'default',

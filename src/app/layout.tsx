@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'Vahicle App',
+  title: 'Vehicle App',
   description: 'A mobile app for vehicle management.',
 };
 
