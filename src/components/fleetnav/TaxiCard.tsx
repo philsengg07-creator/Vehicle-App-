@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Users, Edit, Trash2, CheckCircle, Car, Clock } from "lucide-react";
+import { Users, Edit, Trash2, CheckCircle, Car, Clock, X } from "lucide-react";
 import { useApp } from "@/hooks/use-app";
 import type { Taxi } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,7 @@ function formatBookingTime(isoString: string) {
 }
 
 export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
-  const { role, bookSeat, deleteTaxi, currentEmployeeId } = useApp();
+  const { role, bookSeat, deleteTaxi, cancelBooking, currentEmployeeId } = useApp();
   
   const isFull = taxi.bookedSeats >= taxi.capacity;
   const progressValue = (taxi.bookedSeats / taxi.capacity) * 100;
@@ -52,7 +52,11 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
     bookSeat(taxi.id);
   };
 
-  const BookingListDialog = (
+  const handleCancelBooking = (bookingId: string, employeeId: string) => {
+    cancelBooking(taxi.id, bookingId, employeeId);
+  }
+
+  const BookingListDialogContent = () => (
     <DialogContent>
         <DialogHeader>
           <DialogTitle>Bookings for {taxi.name}</DialogTitle>
@@ -60,9 +64,32 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
         {taxi.bookings.length > 0 ? (
           <ul className="space-y-2 pt-4">
             {taxi.bookings.map((booking) => (
-              <li key={booking.id} className="flex items-center justify-between text-sm p-3 bg-secondary rounded-md font-medium">
-                <span>{booking.employeeId}</span>
-                <span className="text-xs text-muted-foreground">{formatBookingTime(booking.bookingTime)}</span>
+              <li key={booking.id} className="group flex items-center justify-between text-sm p-3 bg-secondary rounded-md font-medium">
+                <div className="flex flex-col">
+                  <span>{booking.employeeId}</span>
+                  <span className="text-xs text-muted-foreground font-normal">{formatBookingTime(booking.bookingTime)}</span>
+                </div>
+                {role === 'admin' && (
+                  <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <X className="h-4 w-4" />
+                          </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                          <AlertDialogHeader>
+                              <AlertDialogTitle>Confirm Cancellation</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                  Are you sure you want to cancel the booking for {booking.employeeId}? This will free up a seat.
+                              </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                              <AlertDialogCancel>No, keep it</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleCancelBooking(booking.id, booking.employeeId)}>Yes, cancel</AlertDialogAction>
+                          </AlertDialogFooter>
+                      </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </li>
             ))}
           </ul>
@@ -72,7 +99,7 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
       </DialogContent>
   );
 
-  const AdminCardContent = () => (
+  const CardBody = () => (
     <Dialog>
       <DialogTrigger asChild>
         <div className="flex flex-col h-full cursor-pointer">
@@ -106,51 +133,13 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
           </CardContent>
         </div>
       </DialogTrigger>
-      {BookingListDialog}
-    </Dialog>
-  );
-
-  const EmployeeCardContent = () => (
-    <Dialog>
-      <DialogTrigger asChild>
-          <div className="flex flex-col h-full cursor-pointer">
-              <CardHeader className="flex-row justify-between items-start">
-                <CardTitle className="font-headline text-xl">{taxi.name}</CardTitle>
-                <div className="flex flex-col items-end gap-2">
-                    {isFull && <Badge variant="destructive" className="shadow-lg">Full</Badge>}
-                    {isBookingClosed && !isFull && <Badge variant="secondary" className="shadow-lg">Booking Closed</Badge>}
-                </div>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            <span>Capacity</span>
-                        </div>
-                        <span className="font-medium text-foreground">{taxi.bookedSeats} / {taxi.capacity}</span>
-                    </div>
-                    <Progress value={progressValue} aria-label={`${taxi.bookedSeats} of ${taxi.capacity} seats booked`} />
-                     {taxi.bookingDeadline && (
-                        <div className="flex items-center justify-between text-sm text-muted-foreground pt-2">
-                            <div className="flex items-center gap-2">
-                                <Clock className="h-4 w-4" />
-                                <span>Booking Closes</span>
-                            </div>
-                            <span className="font-medium text-foreground">{formatTimeToAMPM(taxi.bookingDeadline)}</span>
-                        </div>
-                    )}
-                </div>
-              </CardContent>
-          </div>
-      </DialogTrigger>
-      {BookingListDialog}
+      <BookingListDialogContent />
     </Dialog>
   );
 
   return (
     <Card className="flex flex-col overflow-hidden transition-all hover:shadow-lg animate-in fade-in-0 zoom-in-95">
-      {role === 'admin' ? <AdminCardContent /> : <EmployeeCardContent />}
+      <CardBody />
       <CardFooter className="p-4 bg-card-foreground/5">
         {role === "admin" ? (
           <div className="flex w-full justify-end gap-2">

@@ -5,7 +5,7 @@ import React, { createContext, useState, ReactNode, useMemo, useCallback, useEff
 import type { UserRole, Taxi, Booking, AppNotification } from '@/types';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/lib/firebase';
-import { ref, onValue, set, remove, push, get, update } from 'firebase/database';
+import { ref, onValue, set, remove, push, get, update, runTransaction } from 'firebase/database';
 import { sendPushyNotification } from '@/app/actions/sendPushyNotification';
 
 async function resetData() {
@@ -47,6 +47,7 @@ export interface AppContextType {
   editTaxi: (taxiId: string, data: Partial<Omit<Taxi, 'id' | 'bookedSeats' | 'bookings'>>) => void;
   deleteTaxi: (taxiId: string) => void;
   bookSeat: (taxiId: string) => void;
+  cancelBooking: (taxiId: string, bookingId: string, employeeId: string) => void;
   remainingEmployees: string[];
   notifications: AppNotification[];
   markNotificationsAsRead: () => void;
@@ -121,7 +122,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         if (!lastResetTimestamp) {
           console.log("First time run, setting reset timestamp.");
-          // Don't reset on the very first run, just set the timestamp
           await set(lastResetRef, now.toISOString());
         } else {
           const lastResetDate = new Date(lastResetTimestamp).toDateString();
@@ -223,26 +223,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
         read: false,
       };
       await set(newNotificationRef, newNotification);
-      
-      // Trigger the push notification to the admin
       await sendPushyNotification(message);
   };
 
-  const bookSeat = async (taxiId: string) => {
-    if (!currentEmployeeId) {
+  const bookSeat = async (taxiId: string, employeeToBook?: string) => {
+    const employeeId = employeeToBook || currentEmployeeId;
+    if (!employeeId) {
         toast({ variant: "destructive", title: "Error", description: "Employee not set." });
         return;
     }
     
-    const allTaxisSnapshot = await get(ref(db, 'taxis'));
-    const allTaxis = allTaxisSnapshot.val() || {};
-    const hasBooking = Object.values(allTaxis).some((t: any) => 
-        t.bookings && Object.values(t.bookings).some((b: any) => b.employeeId === currentEmployeeId)
-    );
+    if (!employeeToBook) {
+        const allTaxisSnapshot = await get(ref(db, 'taxis'));
+        const allTaxis = allTaxisSnapshot.val() || {};
+        const hasBooking = Object.values(allTaxis).some((t: any) => 
+            t.bookings && Object.values(t.bookings).some((b: any) => b.employeeId === employeeId)
+        );
 
-    if (hasBooking) {
-        toast({ variant: "destructive", title: "Already Booked", description: "You already have a booking." });
-        return;
+        if (hasBooking) {
+            toast({ variant: "destructive", title: "Already Booked", description: "You already have a booking." });
+            return;
+        }
     }
 
     const taxiRef = ref(db, `taxis/${taxiId}`);
@@ -255,7 +256,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
     const taxi = { id: taxiId, ...taxiSnapshot.val() };
     
-    if (taxi.status === 'closed') {
+    if (taxi.status === 'closed' && !employeeToBook) {
         toast({
             variant: "destructive",
             title: "Booking Closed",
@@ -264,7 +265,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return;
     }
 
-    if (taxi.bookingDeadline) {
+    if (taxi.bookingDeadline && !employeeToBook) {
         const now = new Date();
         const [hours, minutes] = taxi.bookingDeadline.split(':').map(Number);
         const deadlineDate = new Date();
@@ -282,10 +283,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     
     if (taxi.bookedSeats >= taxi.capacity) {
+        if (employeeToBook) return; // Don't add to waitlist if it's an auto-booking from waitlist
         const remainingEmployeesRef = ref(db, 'remainingEmployees');
         const newEmployeeRef = push(remainingEmployeesRef);
-        await set(newEmployeeRef, currentEmployeeId);
-        await addNotification(`An employee (${currentEmployeeId}) was added to the waiting list.`);
+        await set(newEmployeeRef, employeeId);
+        await addNotification(`An employee (${employeeId}) was added to the waiting list.`);
         toast({ title: "Taxi Full", description: "This taxi is full. You have been added to the waiting list." });
         return;
     }
@@ -293,19 +295,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const now = new Date();
     const bookingTimestamp = now.toISOString();
     
-    // 1. Add to the daily, resettable booking list for the taxi
     const bookingsRef = ref(db, `taxis/${taxiId}/bookings`);
     const newBookingRef = push(bookingsRef);
     const newBooking: Omit<Booking, 'id'> = {
         taxiId,
         taxiName: taxi.name,
-        employeeId: currentEmployeeId,
+        employeeId: employeeId,
         bookingTime: bookingTimestamp
     };
     await set(newBookingRef, newBooking);
 
-    // 2. Add to the permanent booking history
-    const historyDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const historyDate = now.toISOString().split('T')[0];
     const historyRef = ref(db, `bookingHistory/${historyDate}`);
     const newHistoryBookingRef = push(historyRef);
     await set(newHistoryBookingRef, newBooking);
@@ -313,14 +313,84 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const updatedBookedSeats = (taxi.bookedSeats || 0) + 1;
     await update(taxiRef, { bookedSeats: updatedBookedSeats });
 
-    await addNotification(`${currentEmployeeId} has booked a seat in "${taxi.name}".`);
+    const notificationMessage = employeeToBook
+      ? `${employeeId} was automatically booked into "${taxi.name}" from the waiting list.`
+      : `${employeeId} has booked a seat in "${taxi.name}".`;
+    await addNotification(notificationMessage);
 
     if (updatedBookedSeats === taxi.capacity) {
         await addNotification(`The taxi "${taxi.name}" is now full.`);
     }
     
-    toast({ title: "Success!", description: `Your seat in ${taxi.name} is confirmed.` });
+    if (!employeeToBook) {
+        toast({ title: "Success!", description: `Your seat in ${taxi.name} is confirmed.` });
+    } else {
+        toast({ title: "Seat Allocated", description: `${employeeId} from the waiting list has been given a seat in ${taxi.name}.` });
+    }
   };
+
+  const cancelBooking = async (taxiId: string, bookingId: string, employeeId: string) => {
+    if (role !== 'admin') return;
+
+    await runTransaction(ref(db), (currentData) => {
+        if (!currentData) return;
+
+        const taxi = currentData.taxis[taxiId];
+        const taxiName = taxi.name;
+        
+        // Remove booking and decrement seat count
+        if (taxi.bookings && taxi.bookings[bookingId]) {
+            delete taxi.bookings[bookingId];
+            taxi.bookedSeats = (taxi.bookedSeats || 1) - 1;
+        }
+
+        // Handle waiting list
+        const remainingEmployees = currentData.remainingEmployees;
+        if (remainingEmployees) {
+            const waitingListKeys = Object.keys(remainingEmployees);
+            if (waitingListKeys.length > 0) {
+                const firstWaitingEmployeeKey = waitingListKeys[0];
+                const employeeToBook = remainingEmployees[firstWaitingEmployeeKey];
+                
+                // Remove from waiting list
+                delete currentData.remainingEmployees[firstWaitingEmployeeKey];
+                
+                // Add to taxi booking
+                const now = new Date();
+                const bookingTimestamp = now.toISOString();
+                const newBooking: Omit<Booking, 'id'> = {
+                    taxiId,
+                    taxiName,
+                    employeeId: employeeToBook,
+                    bookingTime: bookingTimestamp,
+                };
+
+                if (!taxi.bookings) taxi.bookings = {};
+                const newBookingRef = push(ref(db, `taxis/${taxiId}/bookings`));
+                taxi.bookings[newBookingRef.key!] = newBooking;
+                taxi.bookedSeats = (taxi.bookedSeats || 0) + 1;
+
+                // Add to permanent history
+                const historyDate = now.toISOString().split('T')[0];
+                if (!currentData.bookingHistory) currentData.bookingHistory = {};
+                if (!currentData.bookingHistory[historyDate]) currentData.bookingHistory[historyDate] = {};
+                const newHistoryBookingRef = push(ref(db, `bookingHistory/${historyDate}`));
+                currentData.bookingHistory[historyDate][newHistoryBookingRef.key!] = newBooking;
+                
+                addNotification(`${employeeToBook} was automatically booked into "${taxiName}" from the waiting list.`);
+                if (taxi.bookedSeats === taxi.capacity) {
+                    addNotification(`The taxi "${taxiName}" is now full.`);
+                }
+            }
+        }
+        
+        return currentData;
+    });
+
+    await addNotification(`Admin cancelled booking for ${employeeId} in "${taxis.find(t => t.id === taxiId)?.name}".`);
+    toast({ title: "Booking Cancelled", description: `Booking for ${employeeId} has been cancelled.` });
+  };
+
 
   const markNotificationsAsRead = () => {
     const updates: { [key: string]: any } = {};
@@ -358,6 +428,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     editTaxi,
     deleteTaxi,
     bookSeat,
+    cancelBooking,
     remainingEmployees,
     notifications,
     markNotificationsAsRead,
