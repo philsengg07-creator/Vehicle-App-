@@ -323,87 +323,66 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const cancelBooking = async (taxiId: string, bookingId: string, employeeId: string) => {
     if (role !== 'admin') return;
+
+    const taxiRef = ref(db, `taxis/${taxiId}`);
   
-    await runTransaction(ref(db), (currentData) => {
-      if (!currentData || !currentData.taxis || !currentData.taxis[taxiId]) {
-        // If taxi doesn't exist, abort transaction.
-        return;
-      }
-  
-      const taxi = currentData.taxis[taxiId];
-      const taxiName = taxi.name;
-  
-      // Ensure bookings object exists before trying to delete from it
-      if (taxi.bookings && taxi.bookings[bookingId]) {
-        // Remove the booking
-        delete taxi.bookings[bookingId];
-        // Decrement the seat count
-        taxi.bookedSeats = (taxi.bookedSeats || 1) - 1;
-      } else {
-        // If booking doesn't exist, abort transaction
-        return;
-      }
-  
-      // Handle the waiting list
-      const remainingEmployees = currentData.remainingEmployees;
-      if (remainingEmployees) {
-        const waitingListKeys = Object.keys(remainingEmployees);
-        if (waitingListKeys.length > 0) {
-          // Get the first employee from the waiting list
-          const firstWaitingEmployeeKey = waitingListKeys[0];
-          const employeeToBook = remainingEmployees[firstWaitingEmployeeKey];
-  
-          // Remove from waiting list
-          delete currentData.remainingEmployees[firstWaitingEmployeeKey];
-  
-          // Create and add the new booking
-          const now = new Date();
-          const bookingTimestamp = now.toISOString();
-          const newBooking: Omit<Booking, 'id'> = {
-            taxiId,
-            taxiName,
-            employeeId: employeeToBook,
-            bookingTime: bookingTimestamp,
-          };
-  
-          if (!taxi.bookings) taxi.bookings = {};
-          const newBookingRef = push(ref(db, `taxis/${taxiId}/bookings`)); // This generates a key, we need to use it
-          taxi.bookings[newBookingRef.key!] = newBooking;
-          taxi.bookedSeats = (taxi.bookedSeats || 0) + 1;
-  
-          // Also add to permanent history log
-          const historyDate = now.toISOString().split('T')[0];
-          if (!currentData.bookingHistory) currentData.bookingHistory = {};
-          if (!currentData.bookingHistory[historyDate]) currentData.bookingHistory[historyDate] = {};
-          const newHistoryBookingRef = push(ref(db, `bookingHistory/${historyDate}`));
-          currentData.bookingHistory[historyDate][newHistoryBookingRef.key!] = newBooking;
-  
-          // We handle notifications outside the transaction to avoid complexity
+    await runTransaction(taxiRef, (taxi) => {
+      if (taxi) {
+        const taxiName = taxi.name;
+        // Check if the booking to be cancelled exists
+        if (taxi.bookings && taxi.bookings[bookingId]) {
+          // Correctly remove the booking by setting it to null
+          taxi.bookings[bookingId] = null;
+          taxi.bookedSeats = (taxi.bookedSeats || 1) - 1;
+          
+          const remainingEmployeesRef = ref(db, 'remainingEmployees');
+          
+          // Check if there is a waiting list and if so, take the first person
+          get(remainingEmployeesRef).then((snapshot) => {
+            if (snapshot.exists()) {
+              const remainingEmployees = snapshot.val();
+              const employeeKeys = Object.keys(remainingEmployees);
+              const firstEmployeeKey = employeeKeys[0];
+              const employeeToBook = remainingEmployees[firstEmployeeKey];
+              
+              // Remove the employee from the waiting list
+              remove(ref(db, `remainingEmployees/${firstEmployeeKey}`));
+
+              // Create a new booking for this employee
+              const now = new Date();
+              const bookingTimestamp = now.toISOString();
+              const newBookingRef = push(ref(db, `taxis/${taxiId}/bookings`));
+              const newBooking = {
+                  taxiId,
+                  taxiName,
+                  employeeId: employeeToBook,
+                  bookingTime: bookingTimestamp
+              };
+              set(newBookingRef, newBooking);
+              
+              // Update seat count
+              update(taxiRef, { bookedSeats: (taxi.bookedSeats || 0) + 1 });
+              
+              // Add to history
+              const historyDate = now.toISOString().split('T')[0];
+              const historyRef = ref(db, `bookingHistory/${historyDate}`);
+              const newHistoryBookingRef = push(historyRef);
+              set(newHistoryBookingRef, newBooking);
+
+              // Send notifications
+              addNotification(`${employeeToBook} was automatically booked into "${taxiName}" from the waiting list.`);
+              if (((taxi.bookedSeats || 0) + 1) === taxi.capacity) {
+                addNotification(`The taxi "${taxiName}" is now full.`);
+              }
+            }
+          });
         }
       }
-      
-      // IMPORTANT: Return the whole modified data object to commit the transaction
-      return currentData;
+      return taxi;
     });
-  
-    // Handle notifications after the transaction is likely to have succeeded
+
     const taxiName = taxis.find(t => t.id === taxiId)?.name || 'a taxi';
     await addNotification(`Admin cancelled booking for ${employeeId} in "${taxiName}".`);
-  
-    // Check if someone from waiting list was booked
-    const remainingAfter = (await get(ref(db, 'remainingEmployees'))).val();
-    const originalCount = remainingEmployees.length;
-    const newCount = remainingAfter ? Object.values(remainingAfter).length : 0;
-  
-    if (originalCount > newCount && newCount < originalCount) {
-        const bookedEmployee = remainingEmployees[0];
-        await addNotification(`${bookedEmployee} was automatically booked into "${taxiName}" from the waiting list.`);
-        const taxiSnapshot = await get(ref(db, `taxis/${taxiId}`));
-        if (taxiSnapshot.val().bookedSeats === taxiSnapshot.val().capacity) {
-            await addNotification(`The taxi "${taxiName}" is now full.`);
-        }
-    }
-  
     toast({ title: "Booking Cancelled", description: `Booking for ${employeeId} has been cancelled.` });
   };
 
