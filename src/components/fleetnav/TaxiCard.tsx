@@ -52,6 +52,26 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
     bookSeat(taxi.id);
   };
 
+  const BookingListDialog = (
+    <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Bookings for {taxi.name}</DialogTitle>
+        </DialogHeader>
+        {taxi.bookings.length > 0 ? (
+          <ul className="space-y-2 pt-4">
+            {taxi.bookings.map((booking) => (
+              <li key={booking.id} className="flex items-center justify-between text-sm p-3 bg-secondary rounded-md font-medium">
+                <span>{booking.employeeId}</span>
+                <span className="text-xs text-muted-foreground">{formatBookingTime(booking.bookingTime)}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-4">No employees have booked this taxi yet.</p>
+        )}
+      </DialogContent>
+  );
+
   const AdminCardContent = () => (
     <Dialog>
       <DialogTrigger asChild>
@@ -86,59 +106,46 @@ export function TaxiCard({ taxi, onEdit }: TaxiCardProps) {
           </CardContent>
         </div>
       </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Bookings for {taxi.name}</DialogTitle>
-        </DialogHeader>
-        {taxi.bookings.length > 0 ? (
-          <ul className="space-y-2 pt-4">
-            {taxi.bookings.map((booking) => (
-              <li key={booking.id} className="flex items-center justify-between text-sm p-3 bg-secondary rounded-md font-medium">
-                <span>{booking.employeeId}</span>
-                <span className="text-xs text-muted-foreground">{formatBookingTime(booking.bookingTime)}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-muted-foreground text-center py-4">No employees have booked this taxi yet.</p>
-        )}
-      </DialogContent>
+      {BookingListDialog}
     </Dialog>
   );
 
   const EmployeeCardContent = () => (
-    <>
-      <CardHeader className="flex-row justify-between items-start">
-        <CardTitle className="font-headline text-xl">{taxi.name}</CardTitle>
-        <div className="flex flex-col items-end gap-2">
-            {isFull && <Badge variant="destructive" className="shadow-lg">Full</Badge>}
-            {isBookingClosed && !isFull && <Badge variant="secondary" className="shadow-lg">Booking Closed</Badge>}
-        </div>
-      </CardHeader>
-      <CardContent className="flex-grow">
-        <div className="space-y-4">
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    <span>Capacity</span>
+    <Dialog>
+      <DialogTrigger asChild>
+          <div className="flex flex-col h-full cursor-pointer">
+              <CardHeader className="flex-row justify-between items-start">
+                <CardTitle className="font-headline text-xl">{taxi.name}</CardTitle>
+                <div className="flex flex-col items-end gap-2">
+                    {isFull && <Badge variant="destructive" className="shadow-lg">Full</Badge>}
+                    {isBookingClosed && !isFull && <Badge variant="secondary" className="shadow-lg">Booking Closed</Badge>}
                 </div>
-                {role === 'admin' || isFull || isBookingClosed ? (
-                  <span className="font-medium text-foreground">{taxi.bookedSeats} / {taxi.capacity}</span>
-                ) : null }
-            </div>
-            <Progress value={progressValue} aria-label={`${taxi.bookedSeats} of ${taxi.capacity} seats booked`} />
-             {taxi.bookingDeadline && (
-                <div className="flex items-center justify-between text-sm text-muted-foreground pt-2">
-                    <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        <span>Booking Closes</span>
+              </CardHeader>
+              <CardContent className="flex-grow">
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            <span>Capacity</span>
+                        </div>
+                        <span className="font-medium text-foreground">{taxi.bookedSeats} / {taxi.capacity}</span>
                     </div>
-                    <span className="font-medium text-foreground">{formatTimeToAMPM(taxi.bookingDeadline)}</span>
+                    <Progress value={progressValue} aria-label={`${taxi.bookedSeats} of ${taxi.capacity} seats booked`} />
+                     {taxi.bookingDeadline && (
+                        <div className="flex items-center justify-between text-sm text-muted-foreground pt-2">
+                            <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4" />
+                                <span>Booking Closes</span>
+                            </div>
+                            <span className="font-medium text-foreground">{formatTimeToAMPM(taxi.bookingDeadline)}</span>
+                        </div>
+                    )}
                 </div>
-            )}
-        </div>
-      </CardContent>
-    </>
+              </CardContent>
+          </div>
+      </DialogTrigger>
+      {BookingListDialog}
+    </Dialog>
   );
 
   return (
